@@ -13,8 +13,7 @@ static char **tokenizeProgram(char*);
 static char *getFileContents(char*);
 static int initializeArchitecture(char**);
 static int setInstructions(char**);
-static int loadBytes(char**);
-static int loadLongs(char**);
+static int runDirectives(char**);
 
 /*
     Calls the appropriate functions to perform the following steps:
@@ -35,35 +34,30 @@ int loadFileIntoMemory(char *fileName) {
     free(programString);
     initializeArchitecture(programTokens);
     setInstructions(programTokens);
-    loadBytes(programTokens);
-    loadLongs(programTokens);
-    return 1;
-}
-
-static int loadLongs(char **program) {
-    int i = 0;
-    while(program[i]) {
-        if(strcmp(program[i], LONG_D) == 0) {
-            int32_t addr = hexToDec(program[i + 1]);
-            int32_t num = atoi(program[i + 2]);
-            putLong(num, addr);
-        }
-        i++;
-    }
+    runDirectives(programTokens);
     printMemory();
     return 1;
 }
 
-/*
-    Executes the .byte directives in the program
-*/
-static int loadBytes(char **program) {
+static int runDirectives(char **program) {
     int i = 0;
     while(program[i]) {
         if(strcmp(program[i], BYTE_D) == 0) {
             int32_t addr = hexToDec(program[i + 1]);
             char byte = (char)hexToDec(program[i + 2]);
             putByte(byte, addr);
+        } else if(strcmp(program[i], LONG_D) == 0) {
+            int32_t addr = hexToDec(program[i + 1]);
+            int32_t num = atoi(program[i + 2]);
+            putLong(num, addr);
+        } else if(strcmp(program[i], STRING_D) == 0) {
+            int32_t addr = hexToDec(program[i + 1]);
+            char * str = program[i + 2];
+            putString(str, addr);
+        } else if(strcmp(program[i], BSS_D) == 0) {
+            int32_t addr = hexToDec(program[i + 1]);
+            int32_t size = atoi(program[i + 2]);
+            bss(size, addr);
         }
         i++;
     }

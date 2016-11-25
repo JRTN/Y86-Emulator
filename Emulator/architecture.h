@@ -51,6 +51,7 @@ int insertInstructions(char*, int32_t);
 int putString(char*, int32_t);
 int putByte(char, int32_t);
 int putLong(int32_t, int32_t);
+int bss(int32_t, int32_t);
 
 void halt(void);
 void rrmovl(reg_t, reg_t);

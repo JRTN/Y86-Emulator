@@ -25,22 +25,55 @@ status_t execute() {
 }
 
 /*
-    
+    Allocates the necessary amount of memory needed for program execution
+    Arguments:
+        int32_t amt - the amount (in bytes) of memory to be allocated
+    Return:
+        1 if memory allocation is successful; 0 otherwise
 */
 int initialize(int32_t amt) {
     size = amt;
     memory = malloc(amt + 1);
     if(memory) {
         memory[amt] = '\0';
+        printf("Allocated %d bytes of memory for the memory space\n", amt + 1);
     }
     return memory != NULL;
 }
 
+int bss(int32_t amt, int32_t addr) {
+    int i;
+    int ok = 1;
+    for(i = 0; i < amt; i++) {
+        ok *= putByte(0, addr + i);
+    }
+    printf("Initialized %d bytes in memory with value 0\n", i + 1);
+    return ok;
+}
+
+/*
+    Stores the instruction string in memory and sets the instruction pointer to
+    the beginning of the instructions
+    Arguments:
+        char *instructions - the string containing the machine instructions
+        int32_t addr - the address where the instructions will be stored and
+                       where the instruction pointer will be set
+    Return:
+        1 if there were no issues storing the instructions; 0 otherwise  
+*/
 int insertInstructions(char *instructions, int32_t addr) {
     cpu.ipointer = addr;
     return putString(instructions, addr);
 }
 
+/*
+    Stores a string in memory
+    Arguments:
+        char *str - the string to be stored in memory
+        int32_t addr - the address in memory where the string will be stored
+    Return:
+        1 if the entire string was successfully stored in memory; 0 otherwise
+*/
 int putString(char *str, int32_t addr) {
     int i = 0;
     int ok = 1;
@@ -48,6 +81,8 @@ int putString(char *str, int32_t addr) {
         ok *= putByte(str[i], addr + i);
         i++;
     }
+    printf("PutString: Inserted String \"%s\" into memory at location %x\n", str, addr);
+    /*TODO: Maybe include null terminating character later on down the line */
     return ok;
 }
 
@@ -62,13 +97,13 @@ int putString(char *str, int32_t addr) {
         is out of range.
 */
 int putLong(int32_t num, int32_t addr) {
-    if(addr + 4 >= size) {
+    if(addr + 4 > size) {
         return 0;
     }
 
     int * loc = (int*)(&memory[addr]);
     *loc = num;
-    printf("%d put in memory\n", *loc);
+    printf("PutLong: Put %d in memory address %x\n", *loc, addr);
 
     return 1;
 }
@@ -83,7 +118,7 @@ int putLong(int32_t num, int32_t addr) {
         are no issues; 0 otherwise (which can also be a valid return)
 */
 int32_t getLong(int32_t addr) {
-    if(addr + 4 >= size) {
+    if(addr + 4 > size) {
         return 0;
     }
     int *loc = (int*)(&memory[addr]);
@@ -100,13 +135,10 @@ int32_t getLong(int32_t addr) {
         0 otherwise
 */
 int putByte(char byte, int32_t addr) {
-    if(addr >= size) {
+    if(addr > size) {
         return 0;
     }
-
-    if(memory[addr]) {
-        printf("WARNING: Memory at 0x%X being overwritten\n", addr);
-    }
+    printf("PutByte: Put %d in memory address %x\n", (int)byte, addr);
     memory[addr] = byte;
     return 1;
 }
