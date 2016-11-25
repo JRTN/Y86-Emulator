@@ -1,5 +1,6 @@
 #ifndef tokenizer_h
 #define tokenizer_h
+#include "architecture.h"
 
 struct TokenizerT_ {
     char *current;

@@ -2,6 +2,7 @@
 #include <malloc.h>
 #include <string.h>
 #include <stdint.h>
+#include <stdlib.h>
 
 #include "architecture.h"
 #include "loader.h"
@@ -12,6 +13,8 @@ static char **tokenizeProgram(char*);
 static char *getFileContents(char*);
 static int initializeArchitecture(char**);
 static int setInstructions(char**);
+static int loadBytes(char**);
+static int loadLongs(char**);
 
 /*
     Calls the appropriate functions to perform the following steps:
@@ -32,10 +35,45 @@ int loadFileIntoMemory(char *fileName) {
     free(programString);
     initializeArchitecture(programTokens);
     setInstructions(programTokens);
-    
+    loadBytes(programTokens);
+    loadLongs(programTokens);
     return 1;
 }
 
+static int loadLongs(char **program) {
+    int i = 0;
+    while(program[i]) {
+        if(strcmp(program[i], LONG_D) == 0) {
+            int32_t addr = hexToDec(program[i + 1]);
+            int32_t num = atoi(program[i + 2]);
+            putLong(num, addr);
+        }
+        i++;
+    }
+    printMemory();
+    return 1;
+}
+
+/*
+    Executes the .byte directives in the program
+*/
+static int loadBytes(char **program) {
+    int i = 0;
+    while(program[i]) {
+        if(strcmp(program[i], BYTE_D) == 0) {
+            int32_t addr = hexToDec(program[i + 1]);
+            char byte = (char)hexToDec(program[i + 2]);
+            putByte(byte, addr);
+        }
+        i++;
+    }
+    return 1;
+}
+
+/*
+    Executes the .text directive in the file, storing the machine instructions
+    in memory.
+*/
 static int setInstructions(char **program) {
     int textPos = searchStringArray(program, TEXT_D);
     if(textPos == -1) {
