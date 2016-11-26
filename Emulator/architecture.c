@@ -19,7 +19,125 @@ static status_t status = AOK;
 */
 status_t execute() {
     while(status == AOK) {
-
+        unsigned char instruction = memory[cpu.ipointer];
+        printf("%x\n", instruction);
+        switch(instruction) {
+            case 0x00: /* nop */
+                printf("nop\n");
+                cpu.ipointer++;
+            break;
+            case 0x10: /* halt */
+                printf("halt\n");
+                status = HLT;
+                cpu.ipointer++;
+            break;
+            case 0x20: /* rrmovl */
+                printf("rrmovl\n");
+                cpu.ipointer += 2;
+            break;
+            case 0x30: /* irmovl */
+                printf("irmovl\n");
+                cpu.ipointer += 6;
+            break;
+            case 0x40: /* rmmovl */
+                printf("rmmovl\n");
+                cpu.ipointer += 6;
+            break;
+            case 0x50: /* mrmovl */
+                printf("mrmovl\n");
+                cpu.ipointer += 6;
+            break;
+            case 0x60: /* addl */
+                printf("addl\n");
+                cpu.ipointer += 2;
+            break;
+            case 0x61: /* subl */
+                printf("subl\n");
+                cpu.ipointer += 2;
+            break;
+            case 0x62: /* andl */
+                printf("andl\n");
+                cpu.ipointer += 2;
+            break;
+            case 0x63: /* xorl */
+                printf("xorl\n");
+                cpu.ipointer += 2;
+            break;
+            case 0x64: /* mull */
+                printf("mull\n");
+                cpu.ipointer += 2;
+            break;
+            case 0x65: /* cmpl */
+                printf("cmpl\n");
+                cpu.ipointer += 2;
+            break;
+            case 0x70: /* jmp */
+                printf("jmp\n");
+                cpu.ipointer += 5;
+            break;
+            case 0x71: /* jle */
+                printf("jle\n");
+                cpu.ipointer += 5;
+            break;
+            case 0x72: /* jl */
+                printf("jl\n");
+                cpu.ipointer += 5;
+            break;
+            case 0x73: /* je */
+                printf("je\n");
+                cpu.ipointer += 5;
+            break;
+            case 0x74: /* jne */
+                printf("jne\n");
+                cpu.ipointer += 5;
+            break;
+            case 0x75: /* jge */
+                printf("jge\n");
+                cpu.ipointer += 5;
+            break;
+            case 0x76: /* jg */
+                printf("jg\n");
+                cpu.ipointer += 5;
+            break;
+            case 0x80: /* call */
+                printf("call\n");
+                cpu.ipointer += 5;
+            break;
+            case 0x90: /* ret */
+                printf("ret\n");
+                cpu.ipointer += 1;
+            break;
+            case 0xA0: /* pushl */
+                printf("pushl\n");
+                cpu.ipointer += 2;
+            break;
+            case 0xB0: /* popl */
+                printf("popl\n");
+                cpu.ipointer += 2;                
+            break;
+            case 0xC0: /* readb */
+                printf("readb\n");
+                cpu.ipointer += 6;
+            break;
+            case 0xC1: /* readl */
+                printf("readl\n");
+                cpu.ipointer += 6;
+            break;
+            case 0xD0: /* writeb */
+                printf("writeb\n");
+                cpu.ipointer += 6;
+            break;
+            case 0xD1: /* writel */
+                printf("writel\n");
+                cpu.ipointer += 6;
+            break;
+            case 0xE0: /* movsbl */
+                printf("movsbl\n");
+                cpu.ipointer += 6;
+            break;
+            default:
+                status = INS;
+        }
     }
     return status;
 }
@@ -33,10 +151,9 @@ status_t execute() {
 */
 int initialize(int32_t amt) {
     size = amt;
-    memory = malloc(amt + 1);
+    memory = malloc(amt);
     if(memory) {
-        memory[amt] = '\0';
-        printf("Allocated %d bytes of memory for the memory space\n", amt + 1);
+        printf("Allocated %d bytes of memory for the memory space\n", amt);
     }
     return memory != NULL;
 }
@@ -47,7 +164,6 @@ int bss(int32_t amt, int32_t addr) {
     for(i = 0; i < amt; i++) {
         ok *= putByte(0, addr + i);
     }
-    printf("Initialized %d bytes in memory with value 0\n", i + 1);
     return ok;
 }
 
@@ -81,7 +197,6 @@ int putString(char *str, int32_t addr) {
         ok *= putByte(str[i], addr + i);
         i++;
     }
-    printf("PutString: Inserted String \"%s\" into memory at location %x\n", str, addr);
     /*TODO: Maybe include null terminating character later on down the line */
     return ok;
 }
@@ -97,13 +212,12 @@ int putString(char *str, int32_t addr) {
         is out of range.
 */
 int putLong(int32_t num, int32_t addr) {
-    if(addr + 4 > size) {
+    if(addr + 4 >= size) {
         return 0;
     }
 
-    int * loc = (int*)(&memory[addr]);
+    int32_t * loc = (int32_t*)(&memory[addr]);
     *loc = num;
-    printf("PutLong: Put %d in memory address %x\n", *loc, addr);
 
     return 1;
 }
@@ -118,10 +232,10 @@ int putLong(int32_t num, int32_t addr) {
         are no issues; 0 otherwise (which can also be a valid return)
 */
 int32_t getLong(int32_t addr) {
-    if(addr + 4 > size) {
+    if(addr + 4 >= size) {
         return 0;
     }
-    int *loc = (int*)(&memory[addr]);
+    int32_t *loc = (int32_t*)(&memory[addr]);
     return *loc;
 }
 
@@ -135,10 +249,9 @@ int32_t getLong(int32_t addr) {
         0 otherwise
 */
 int putByte(char byte, int32_t addr) {
-    if(addr > size) {
+    if(addr >= size) {
         return 0;
     }
-    printf("PutByte: Put %d in memory address %x\n", (int)byte, addr);
     memory[addr] = byte;
     return 1;
 }

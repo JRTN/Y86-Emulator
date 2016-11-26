@@ -6,6 +6,8 @@
 int main(int argc, char **argv) {
 	if(!loadFileIntoMemory(argv[1])) {
         printf("\nerror\n");
+        return 1;
     }
+    execute();
     return 0;
 }

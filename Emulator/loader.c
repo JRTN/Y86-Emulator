@@ -35,7 +35,6 @@ int loadFileIntoMemory(char *fileName) {
     initializeArchitecture(programTokens);
     setInstructions(programTokens);
     runDirectives(programTokens);
-    printMemory();
     return 1;
 }
 

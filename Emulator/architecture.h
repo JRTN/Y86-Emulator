@@ -5,13 +5,6 @@
 
 #define NUM_REGISTERS 8
 
-#define SIZE_D ".size"
-#define STRING_D ".string"
-#define LONG_D ".long"
-#define BSS_D ".bss"
-#define BYTE_D ".byte"
-#define TEXT_D ".text"
-
 #define EAX 0
 #define ECX 1
 #define EDX 2
@@ -43,6 +36,8 @@ typedef struct cpu_s {
     int8_t SF;
     int8_t ZF;
 } cpu_t;
+
+status_t execute(void);
 
 int initialize(int32_t);
 void printCPU(void);
