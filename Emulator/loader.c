@@ -32,35 +32,40 @@ int loadFileIntoMemory(char *fileName) {
     char *programString = getFileContents(fileName);
     char **programTokens = tokenizeProgram(programString);
     free(programString);
-    initializeArchitecture(programTokens);
-    setInstructions(programTokens);
-    runDirectives(programTokens);
-    return 1;
+    int initialized = initializeArchitecture(programTokens);
+    if(initialized) {
+        int instructionsSet = setInstructions(programTokens);
+        int directivesRun = runDirectives(programTokens);
+        return instructionsSet && directivesRun;
+    }
+    free(programTokens);
+    return 0;
 }
 
 static int runDirectives(char **program) {
     int i = 0;
+    int ok = 1;
     while(program[i]) {
         if(strcmp(program[i], BYTE_D) == 0) {
             int32_t addr = hexToDec(program[i + 1]);
             char byte = (char)hexToDec(program[i + 2]);
-            putByte(byte, addr);
+            ok *= putByte(byte, addr);
         } else if(strcmp(program[i], LONG_D) == 0) {
             int32_t addr = hexToDec(program[i + 1]);
             int32_t num = atoi(program[i + 2]);
-            putLong(num, addr);
+            ok *= putLong(num, addr);
         } else if(strcmp(program[i], STRING_D) == 0) {
             int32_t addr = hexToDec(program[i + 1]);
             char * str = program[i + 2];
-            putString(str, addr);
+            ok *= putString(str, addr);
         } else if(strcmp(program[i], BSS_D) == 0) {
             int32_t addr = hexToDec(program[i + 1]);
             int32_t size = atoi(program[i + 2]);
-            bss(size, addr);
+            ok *= bss(size, addr);
         }
         i++;
     }
-    return 1;
+    return ok;
 }
 
 /*

@@ -1,4 +1,6 @@
 #include "architecture.h"
+#include "util.h"
+#include <string.h>
 #include <malloc.h>
 #include <ctype.h>
 
@@ -19,124 +21,127 @@ static status_t status = AOK;
 */
 status_t execute() {
     while(status == AOK) {
-        unsigned char instruction = memory[cpu.ipointer];
-        printf("%x\n", instruction);
-        switch(instruction) {
+        char* instruction = malloc(3);
+        strncpy(instruction, memory + cpu.ipointer, 2);
+        int32_t n_instruction = hexToDec(instruction);
+        printf("%x\n", n_instruction);
+        switch(n_instruction) {
             case 0x00: /* nop */
                 printf("nop\n");
-                cpu.ipointer++;
+                cpu.ipointer += 1 BYTE;
             break;
             case 0x10: /* halt */
                 printf("halt\n");
                 status = HLT;
-                cpu.ipointer++;
+                cpu.ipointer += 1 BYTE;
             break;
             case 0x20: /* rrmovl */
                 printf("rrmovl\n");
-                cpu.ipointer += 2;
+                cpu.ipointer += 2 BYTE;
             break;
             case 0x30: /* irmovl */
                 printf("irmovl\n");
-                cpu.ipointer += 6;
+                cpu.ipointer += 6 BYTE;
             break;
             case 0x40: /* rmmovl */
                 printf("rmmovl\n");
-                cpu.ipointer += 6;
+                cpu.ipointer += 6 BYTE;
             break;
             case 0x50: /* mrmovl */
                 printf("mrmovl\n");
-                cpu.ipointer += 6;
+                cpu.ipointer += 6 BYTE;
             break;
             case 0x60: /* addl */
                 printf("addl\n");
-                cpu.ipointer += 2;
+                cpu.ipointer += 2 BYTE;
             break;
             case 0x61: /* subl */
                 printf("subl\n");
-                cpu.ipointer += 2;
+                cpu.ipointer += 2 BYTE;
             break;
             case 0x62: /* andl */
                 printf("andl\n");
-                cpu.ipointer += 2;
+                cpu.ipointer += 2 BYTE;
             break;
             case 0x63: /* xorl */
                 printf("xorl\n");
-                cpu.ipointer += 2;
+                cpu.ipointer += 2 BYTE;
             break;
             case 0x64: /* mull */
                 printf("mull\n");
-                cpu.ipointer += 2;
+                cpu.ipointer += 2 BYTE;
             break;
             case 0x65: /* cmpl */
                 printf("cmpl\n");
-                cpu.ipointer += 2;
+                cpu.ipointer += 2 BYTE;
             break;
             case 0x70: /* jmp */
                 printf("jmp\n");
-                cpu.ipointer += 5;
+                cpu.ipointer += 5 BYTE;
             break;
             case 0x71: /* jle */
                 printf("jle\n");
-                cpu.ipointer += 5;
+                cpu.ipointer += 5 BYTE;
             break;
             case 0x72: /* jl */
                 printf("jl\n");
-                cpu.ipointer += 5;
+                cpu.ipointer += 5 BYTE;
             break;
             case 0x73: /* je */
                 printf("je\n");
-                cpu.ipointer += 5;
+                cpu.ipointer += 5 BYTE;
             break;
             case 0x74: /* jne */
                 printf("jne\n");
-                cpu.ipointer += 5;
+                cpu.ipointer += 5 BYTE;
             break;
             case 0x75: /* jge */
                 printf("jge\n");
-                cpu.ipointer += 5;
+                cpu.ipointer += 5 BYTE;
             break;
             case 0x76: /* jg */
                 printf("jg\n");
-                cpu.ipointer += 5;
+                cpu.ipointer += 5 BYTE;
             break;
             case 0x80: /* call */
                 printf("call\n");
-                cpu.ipointer += 5;
+                cpu.ipointer += 5 BYTE;
             break;
             case 0x90: /* ret */
                 printf("ret\n");
-                cpu.ipointer += 1;
+                cpu.ipointer += 1 BYTE;
             break;
             case 0xA0: /* pushl */
                 printf("pushl\n");
-                cpu.ipointer += 2;
+                cpu.ipointer += 2 BYTE;
             break;
             case 0xB0: /* popl */
                 printf("popl\n");
-                cpu.ipointer += 2;                
+                cpu.ipointer += 2 BYTE;                
             break;
             case 0xC0: /* readb */
                 printf("readb\n");
-                cpu.ipointer += 6;
+                cpu.ipointer += 6 BYTE;
             break;
             case 0xC1: /* readl */
                 printf("readl\n");
-                cpu.ipointer += 6;
+                cpu.ipointer += 6 BYTE;
             break;
             case 0xD0: /* writeb */
                 printf("writeb\n");
-                cpu.ipointer += 6;
+                cpu.ipointer += 6 BYTE;
             break;
             case 0xD1: /* writel */
                 printf("writel\n");
-                cpu.ipointer += 6;
+                cpu.ipointer += 6 BYTE;
             break;
             case 0xE0: /* movsbl */
                 printf("movsbl\n");
-                cpu.ipointer += 6;
+                cpu.ipointer += 6 BYTE;
             break;
             default:
                 status = INS;
+                printf("Unknown Instruction Encountered\n");
         }
     }
     return status;
