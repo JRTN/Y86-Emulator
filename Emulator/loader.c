@@ -30,6 +30,10 @@ static int runDirectives(char**);
 */
 int loadFileIntoMemory(char *fileName) {
     char *programString = getFileContents(fileName);
+    if(!programString) {
+        fprintf(stderr, "ERROR: Failed to open file %s, perhaps it does not exist?\n", fileName);
+        return 0;
+    }
     char **programTokens = tokenizeProgram(programString);
     free(programString);
     int initialized = initializeArchitecture(programTokens);

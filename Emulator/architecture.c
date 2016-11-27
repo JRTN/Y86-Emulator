@@ -53,10 +53,8 @@ static void movsbl(void);
         The status of the machine when it stops.
 */
 status_t execute() {
-    char *instruction = calloc(3, sizeof(char));
-    instruction[2] = '\0';
     while(status == AOK) {
-        strncpy(instruction, memory + cpu.ipointer, 2);
+        char *instruction = nt_strncpy(memory + cpu.ipointer, 2);
         int32_t n_instruction = hexToDec(instruction);
         printf("%x\n", n_instruction);
         switch(n_instruction) {
@@ -67,144 +65,117 @@ status_t execute() {
             case 0x10: /* halt */
                 printf("halt\n");
                 halt();
-                cpu.ipointer += 1 BYTE;
             break;
             case 0x20: /* rrmovl */
                 printf("rrmovl\n");
                 rrmovl();
-                cpu.ipointer += 2 BYTE;
             break;
             case 0x30: /* irmovl */
                 printf("irmovl\n");
                 irmovl();
-                cpu.ipointer += 6 BYTE;
             break;
             case 0x40: /* rmmovl */
                 printf("rmmovl\n");
                 rmmovl();
-                cpu.ipointer += 6 BYTE;
             break;
             case 0x50: /* mrmovl */
                 printf("mrmovl\n");
                 mrmovl();
-                cpu.ipointer += 6 BYTE;
             break;
             case 0x60: /* addl */
                 printf("addl\n");
                 addl();
-                cpu.ipointer += 2 BYTE;
             break;
             case 0x61: /* subl */
                 printf("subl\n");
                 subl();
-                cpu.ipointer += 2 BYTE;
             break;
             case 0x62: /* andl */
                 printf("andl\n");
                 andl();
-                cpu.ipointer += 2 BYTE;
             break;
             case 0x63: /* xorl */
                 printf("xorl\n");
                 xorl();
-                cpu.ipointer += 2 BYTE;
             break;
             case 0x64: /* mull */
                 printf("mull\n");
                 mull();
-                cpu.ipointer += 2 BYTE;
             break;
             case 0x65: /* cmpl */
                 printf("cmpl\n");
                 cmpl();
-                cpu.ipointer += 2 BYTE;
             break;
             case 0x70: /* jmp */
                 printf("jmp\n");
                 jmp();
-                cpu.ipointer += 5 BYTE;
             break;
             case 0x71: /* jle */
                 printf("jle\n");
                 jle();
-                cpu.ipointer += 5 BYTE;
             break;
             case 0x72: /* jl */
                 printf("jl\n");
                 jl();
-                cpu.ipointer += 5 BYTE;
             break;
             case 0x73: /* je */
                 printf("je\n");
                 je();
-                cpu.ipointer += 5 BYTE;
             break;
             case 0x74: /* jne */
                 printf("jne\n");
                 jne();
-                cpu.ipointer += 5 BYTE;
             break;
             case 0x75: /* jge */
                 printf("jge\n");
                 jge();
-                cpu.ipointer += 5 BYTE;
             break;
             case 0x76: /* jg */
                 printf("jg\n");
                 jg();
-                cpu.ipointer += 5 BYTE;
             break;
             case 0x80: /* call */
                 printf("call\n");
                 call();
-                cpu.ipointer += 5 BYTE;
             break;
             case 0x90: /* ret */
                 printf("ret\n");
                 ret();
-                cpu.ipointer += 1 BYTE;
             break;
             case 0xA0: /* pushl */
                 printf("pushl\n");
                 pushl();
-                cpu.ipointer += 2 BYTE;
             break;
             case 0xB0: /* popl */
                 printf("popl\n");
                 popl();
-                cpu.ipointer += 2 BYTE;                
             break;
             case 0xC0: /* readb */
                 printf("readb\n");
                 readb();
-                cpu.ipointer += 6 BYTE;
             break;
             case 0xC1: /* readl */
                 printf("readl\n");
                 readl();
-                cpu.ipointer += 6 BYTE;
             break;
             case 0xD0: /* writeb */
                 printf("writeb\n");
                 writeb();
-                cpu.ipointer += 6 BYTE;
             break;
             case 0xD1: /* writel */
                 printf("writel\n");
                 writel();
-                cpu.ipointer += 6 BYTE;
             break;
             case 0xE0: /* movsbl */
                 printf("movsbl\n");
                 movsbl();
-                cpu.ipointer += 6 BYTE;
             break;
             default:
                 status = INS;
                 printf("Unknown Instruction Encountered\n");
         }
+        free(instruction);
     }
-    free(instruction);
     return status;
 }
 
@@ -263,7 +234,6 @@ int putString(char *str, int32_t addr) {
         ok *= putByte(str[i], addr + i);
         i++;
     }
-    /*TODO: Maybe include null terminating character later on down the line */
     return ok;
 }
 
@@ -346,108 +316,143 @@ void printMemory() {
 
 static void halt() {
     status = HLT;
+    cpu.ipointer += 1 BYTE;
 }
 
+/*
+    ASCII Form: 20 rA rB
+    Length: 2 bytes
+    Behavior: rB <- rA
+*/
 static void rrmovl() {
-
+    int32_t rA = memory[cpu.ipointer + 2] - '0';
+    int32_t rB = memory[cpu.ipointer + 3] - '0';
+    printf("Copying contents of register %d into register %d\n", rB, rA);
+    cpu.registers[rB] = cpu.registers[rA];
+    cpu.ipointer += 2 BYTE;
 }
 
+/*
+    ASCII Form: 30 F rB 4bytevalue
+    Length: 6 bytes
+    Behavior: rB <- 4 byte value
+*/
 static void irmovl() {
-
+    int32_t rB = memory[cpu.ipointer + 3] - '0';
+    char *valStr = nt_strncpy(memory + cpu.ipointer + 2 BYTE, 4 BYTE);
+    int32_t val = hexToDec(valStr);
+    printf("Storing value %d in register %d\n", val, rB);
+    cpu.registers[rB] = val;
+    free(valStr);
+    cpu.ipointer += 6 BYTE;
 }
 
+/*
+    ASCII form: 40 rA rB 4byteoffset
+    Length: 6 bytes
+    Behavior: mem[ rB + 4byteoffset ] <- rA
+*/
 static void rmmovl() {
-
+    int32_t rA = memory[cpu.ipointer + 2] - '0';
+    int32_t rB = memory[cpu.ipointer + 3] - '0';
+    char *offStr = nt_strncpy(memory + cpu.ipointer + 2 BYTE, 4 BYTE);
+    int32_t off = hexToDec(offStr);
+    int32_t dst = cpu.registers[rB] + off;
+    int32_t val = cpu.registers[rA];
+    printf("Copying contents from register %d into memory location %d\n", rA, dst);
+    putLong(val, dst);
+    free(offStr);
+    cpu.ipointer += 6 BYTE;
 }
 
 static void mrmovl() {
-
+    cpu.ipointer += 6 BYTE;
 }
 
 static void addl() {
-
+    cpu.ipointer += 2 BYTE;
 }
 
 static void subl() {
-
+    cpu.ipointer += 2 BYTE;
 }
 
 static void andl() {
-
+    cpu.ipointer += 2 BYTE;
 }
 
 static void xorl() {
-
+    cpu.ipointer += 2 BYTE;
 }
 
 static void mull() {
-
+    cpu.ipointer += 2 BYTE;
 }
 
 static void cmpl() {
-
+    cpu.ipointer += 2 BYTE;
 }
 
 static void jmp() {
-
+    cpu.ipointer += 5 BYTE;
 }
 
 static void jle() {
-
+    cpu.ipointer += 5 BYTE;
 }
 
 static void jne() {
-
+    cpu.ipointer += 5 BYTE;
 }
 
 static void jge() {
-
+    cpu.ipointer += 5 BYTE;
 }
 
 static void jg() {
-
+    cpu.ipointer += 5 BYTE;
 }
 
 static void jl() {
-
+    cpu.ipointer += 5 BYTE;
 }
 
 static void je() {
-
+    cpu.ipointer += 5 BYTE;
 }
 
 static void call() {
-
+    cpu.ipointer += 5 BYTE;
 }
 
 static void ret() {
-
+    cpu.ipointer += 1 BYTE;
 }
 
 static void pushl() {
-
+    cpu.ipointer += 2 BYTE;
 }
 
 static void popl() {
-
+    cpu.ipointer += 2 BYTE;
 }
 
 static void readb() {
-
+    cpu.ipointer += 6 BYTE;
 }
 
 static void readl() {
-
+    cpu.ipointer += 6 BYTE;
 }
 
 static void writeb() {
-
+    cpu.ipointer += 6 BYTE;
 }
 
 static void writel() {
-
+    cpu.ipointer += 6 BYTE;
 }
 
 static void movsbl() {
-
+    cpu.ipointer += 6 BYTE;
 }

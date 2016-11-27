@@ -1,5 +1,6 @@
 #include <string.h>
 #include <stdio.h>
+#include <malloc.h>
 #include "util.h"
 
 /*
@@ -37,6 +38,24 @@ int32_t hexToDec(char *hex) {
     int res = sscanf(hex, "%x", &result);
     if(!res) {
         return -1;
+    }
+    return result;
+}
+
+/*
+    Copies the first n characters from a c string and creates a new null-terminated c string
+    out of the copied characters.
+    Arguments:
+        const char *src - the string from which the characters will be copied
+        size_t n - the number of characters to be copied
+    Return:
+        A new null terminated c string containing the copied characters if successfull; null otherwise
+*/
+char *nt_strncpy(const char *src, size_t n) {
+    char *result = calloc(n + 1, sizeof(char));
+    if(result) {
+        result[n] = '\0';
+        strncpy(result, src, n);
     }
     return result;
 }
