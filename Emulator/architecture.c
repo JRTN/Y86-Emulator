@@ -16,20 +16,9 @@ static void irmovl(void);
 static void rmmovl(void);
 static void mrmovl(void);
 
-static void addl(void);
-static void subl(void);
-static void andl(void);
-static void xorl(void);
-static void mull(void);
-static void cmpl(void);
+static void op(int);
 
-static void jmp(void);
-static void jle(void);
-static void jne(void);
-static void jge(void);
-static void jg(void);
-static void jl(void);
-static void je(void);
+static void jXX(int);
 
 static void call(void);
 static void ret(void);
@@ -84,55 +73,55 @@ status_t execute() {
             break;
             case 0x60: /* addl */
                 printf("addl\n");
-                addl();
+                op(ADD);
             break;
             case 0x61: /* subl */
                 printf("subl\n");
-                subl();
+                op(SUB);
             break;
             case 0x62: /* andl */
                 printf("andl\n");
-                andl();
+                op(AND);
             break;
             case 0x63: /* xorl */
                 printf("xorl\n");
-                xorl();
+                op(XOR);
             break;
             case 0x64: /* mull */
                 printf("mull\n");
-                mull();
+                op(MUL);
             break;
             case 0x65: /* cmpl */
                 printf("cmpl\n");
-                cmpl();
+                op(CMP);
             break;
             case 0x70: /* jmp */
                 printf("jmp\n");
-                jmp();
+                jXX(JMP);
             break;
             case 0x71: /* jle */
                 printf("jle\n");
-                jle();
+                jXX(JLE);
             break;
             case 0x72: /* jl */
                 printf("jl\n");
-                jl();
+                jXX(JL);
             break;
             case 0x73: /* je */
                 printf("je\n");
-                je();
+                jXX(JE);
             break;
             case 0x74: /* jne */
                 printf("jne\n");
-                jne();
+                jXX(JNE);
             break;
             case 0x75: /* jge */
                 printf("jge\n");
-                jge();
+                jXX(JGE);
             break;
             case 0x76: /* jg */
                 printf("jg\n");
-                jg();
+                jXX(JG);
             break;
             case 0x80: /* call */
                 printf("call\n");
@@ -327,7 +316,7 @@ static void halt() {
 static void rrmovl() {
     int32_t rA = memory[cpu.ipointer + 2] - '0';
     int32_t rB = memory[cpu.ipointer + 3] - '0';
-    printf("Copying contents of register %d into register %d\n", rB, rA);
+    printf("Copying contents [%d] of register %d into register %d\n", cpu.registers[rA], rA, rB);
     cpu.registers[rB] = cpu.registers[rA];
     cpu.ipointer += 2 BYTE;
 }
@@ -359,66 +348,114 @@ static void rmmovl() {
     int32_t off = hexToDec(offStr);
     int32_t dst = cpu.registers[rB] + off;
     int32_t val = cpu.registers[rA];
-    printf("Copying contents from register %d into memory location %d\n", rA, dst);
+    printf("Copying value [%d] from register %d into memory location %d\n", val, rA, dst);
     putLong(val, dst);
     free(offStr);
     cpu.ipointer += 6 BYTE;
 }
 
+/*
+    ASCII form: 50 rA rB 4byteoffset
+    Length: 6 bytes
+    Behavior: rA <- mem[ rB + 4byteoffset ]
+*/
 static void mrmovl() {
+    int32_t rA = memory[cpu.ipointer + 2] - '0';
+    int32_t rB = memory[cpu.ipointer + 3] - '0';
+    char *offStr = nt_strncpy(memory + cpu.ipointer + 2 BYTE, 4 BYTE);
+    int32_t off = hexToDec(offStr);
+    int32_t src = cpu.registers[rB] + off;
+    int32_t val = getLong(src);
+    printf("Copying value [%d] from memory location %d into register %d\n", val, src, rA);
+    cpu.registers[rA] = val;
     cpu.ipointer += 6 BYTE;
 }
 
-static void addl() {
+/*
+    ASCII form: 6X rA rB
+    Length: 2 bytes
+    Behavior: rB <- rA OP rB and flags set, if OP is cmp, then
+              value is not stored in rB
+*/
+static void op(int fn) {
+    int32_t rA = memory[cpu.ipointer + 2] - '0';
+    int32_t rB = memory[cpu.ipointer + 3] - '0';
+    int32_t result = 0;
+    int32_t valA = cpu.registers[rA];
+    int32_t valB = cpu.registers[rB];
+    switch(fn) {
+        case ADD:
+            result = valB + valA;
+            cpu.OF = (valA > 0 && valB > 0 && result < 0) ||
+                     (valA < 0 && valB < 0 && result > 0);
+            cpu.ZF = result == 0;
+            cpu.SF = result < 0;
+        break;
+        case SUB:
+        case CMP:
+            result = valB - valA;
+            cpu.OF = (valB < 0 && valA > 0 && result > 0) ||
+                     (valB > 0 && valA < 0 && result < 0);
+            cpu.ZF = result == 0;
+            cpu.SF = result < 0;
+        break;
+        case AND:
+            result = valB && valA;
+            cpu.OF = 0;
+            cpu.ZF = result == 0;
+            cpu.SF = result < 0;
+        break;
+        case XOR:
+            result = valB ^ valA;
+            cpu.OF = 0;
+            cpu.ZF = result == 0;
+            cpu.SF = result < 0;
+        break;
+        case MUL:
+            result = valB * valA;
+            cpu.OF = (valA > 0 && valB > 0 && result < 0) ||
+                     (valA < 0 && valB < 0 && result < 0) ||
+                     ((valA < 0 || valB < 0) && (valA > 0 || valB > 0) && result > 0);
+        break;
+    }
+    if(fn != CMP) {
+        cpu.registers[rB] = result;
+    }
     cpu.ipointer += 2 BYTE;
 }
 
-static void subl() {
-    cpu.ipointer += 2 BYTE;
-}
+/*
+    
+*/
+static void jXX(int fn) {
+    int shouldJump = 0;
+    char *destString = nt_strncpy(memory + cpu.ipointer + 1 BYTE, 4 BYTE);
+    int32_t destination = hexToDec(destString);
+    printf("Jumping to destination %s = %d\n", destString, destination);
+    switch(fn) {
+        case JLE:
+            shouldJump = (cpu.SF ^ cpu.OF) || cpu.ZF;
+        break;
+        case JL:
+            shouldJump = cpu.SF ^ cpu.OF;
+        break;
+        case JE:
+            shouldJump = cpu.ZF;
+        break;
+        case JNE:
+            shouldJump = !cpu.ZF;
+        break;
+        case JGE:
+            shouldJump = !(cpu.SF ^ cpu.OF);
+        break;
+        case JG:
+            shouldJump = !(cpu.SF ^ cpu.OF) && !cpu.ZF;
+        break;
+    }
 
-static void andl() {
-    cpu.ipointer += 2 BYTE;
-}
-
-static void xorl() {
-    cpu.ipointer += 2 BYTE;
-}
-
-static void mull() {
-    cpu.ipointer += 2 BYTE;
-}
-
-static void cmpl() {
-    cpu.ipointer += 2 BYTE;
-}
-
-static void jmp() {
-    cpu.ipointer += 5 BYTE;
-}
-
-static void jle() {
-    cpu.ipointer += 5 BYTE;
-}
-
-static void jne() {
-    cpu.ipointer += 5 BYTE;
-}
-
-static void jge() {
-    cpu.ipointer += 5 BYTE;
-}
-
-static void jg() {
-    cpu.ipointer += 5 BYTE;
-}
-
-static void jl() {
-    cpu.ipointer += 5 BYTE;
-}
-
-static void je() {
-    cpu.ipointer += 5 BYTE;
+    if(shouldJump || fn == JMP) {
+        cpu.ipointer = destination;
+    }
 }
 
 static void call() {

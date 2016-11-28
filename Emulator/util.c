@@ -1,11 +1,12 @@
 #include <string.h>
 #include <stdio.h>
 #include <malloc.h>
+#include <stdlib.h>
 #include "util.h"
 
 /*
-    Searches an array of strings for the given target and
-    returns the position of the first encounter.
+    Simple linear search that searches an array of strings for the 
+    given target and returns the position of the first encounter.
     Arguments:
         char **arr - the array of strings to be searched
         char *target - the string to search for
@@ -24,6 +25,17 @@ int searchStringArray(char **arr, char *target) {
     return -1;
 }
 
+char *strdup (const char *s) {
+    char *d = malloc (strlen (s) + 1);
+    if (d != NULL) strcpy (d,s);
+    return d;
+}
+
+void inplace_rev( char * s ) {
+  char t, *e = s + strlen(s);
+  while ( --e > s ) { t = *s;*s++=*e;*e=t; }
+}
+
 /*
     Converts a hexadecimal string representatiion of a 32 bit number
     into a 32 bit integer. 
@@ -34,11 +46,9 @@ int searchStringArray(char **arr, char *target) {
         are encountered; -1 otherwise.
 */
 int32_t hexToDec(char *hex) {
-    int32_t result;
-    int res = sscanf(hex, "%x", &result);
-    if(!res) {
-        return -1;
-    }
+    char *str = strdup(hex);
+    int32_t result = (int32_t) strtoul(str, NULL, 16);
+    free(str);
     return result;
 }
 

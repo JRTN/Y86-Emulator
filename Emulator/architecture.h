@@ -16,6 +16,21 @@
 #define ESI 6
 #define EDI 7
 
+#define ADD 0
+#define SUB 1
+#define AND 2
+#define XOR 3
+#define MUL 4
+#define CMP 5
+
+#define JMP 0
+#define JLE 1
+#define JL  2
+#define JE  3
+#define JNE 4
+#define JGE 5
+#define JG  6
+
 typedef int32_t reg_t;
 
 typedef enum status_e {
