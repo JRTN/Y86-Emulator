@@ -304,7 +304,21 @@ static void halt() {
 }
 
 /*
-
+    Performs mov instructions of the given type. There are 4 types of mov:
+        1. RR - Register to Register move
+                rB <- rA
+                2 byte length
+        2. IR - Immediate to Register move
+                rB <- val
+                6 byte length
+        3. RM - Register to Memory move
+                val(rB) <- rA
+                6 byte length
+        4. MR - Memory to Register move
+                rA <- val(rB)
+    Arguments:
+        int fn - The type of mov instruction to be performed
+                
 */
 void mov(int fn) {
     int32_t rA = memory[cpu.ipointer + 2] - '0';
@@ -341,10 +355,15 @@ void mov(int fn) {
 }
 
 /*
-    ASCII form: 6X rA rB
-    Length: 2 bytes
-    Behavior: rB <- rA OP rB and flags set, if OP is cmp, then
-              value is not stored in rB
+    Performs a given operation and sets the appropriate flags. There are 6 operations:
+        1. ADD - rB = rB + rA
+        2. SUB - rB = rB - rA
+        3. AND - rB = rB && rA
+        4. XOR - rB = rB ^ rA
+        5. MUL - rB = rB * rA
+        6. CMP - rB - rA and set flags accordingly
+    Arguments:
+        int fn - the operation to be performed
 */
 static void op(int fn) {
     int32_t rA = memory[cpu.ipointer + 2] - '0';
@@ -355,38 +374,52 @@ static void op(int fn) {
     switch(fn) {
         case ADD:
             result = valB + valA;
+            /*
+                Overflow if:
+                    valA is positive, valB is positive, and result is negative
+                    or
+                    valA is negative, valB is negative, and result is positive
+            */
             cpu.OF = (valA > 0 && valB > 0 && result < 0) ||
                      (valA < 0 && valB < 0 && result > 0);
-            cpu.ZF = result == 0;
-            cpu.SF = result < 0;
         break;
         case SUB:
         case CMP:
             result = valB - valA;
+            /*
+                Overflow if:
+                    valB is negative, valA is positive, and result is positive
+                    or
+                    valB is positive, valA is negative, and result is negative
+            */
             cpu.OF = (valB < 0 && valA > 0 && result > 0) ||
                      (valB > 0 && valA < 0 && result < 0);
-            cpu.ZF = result == 0;
-            cpu.SF = result < 0;
         break;
         case AND:
             result = valB && valA;
             cpu.OF = 0;
-            cpu.ZF = result == 0;
-            cpu.SF = result < 0;
         break;
         case XOR:
             result = valB ^ valA;
             cpu.OF = 0;
-            cpu.ZF = result == 0;
-            cpu.SF = result < 0;
         break;
         case MUL:
             result = valB * valA;
+            /*
+                Overflow if:
+                    valA is positive, valB is positive, and result is negative
+                    or
+                    valA is negative, valB is negative, and result is negative
+                    or
+                    one val is positive, one val is negative, and result is positive
+            */
             cpu.OF = (valA > 0 && valB > 0 && result < 0) ||
                      (valA < 0 && valB < 0 && result < 0) ||
-                     ((valA < 0 || valB < 0) && (valA > 0 || valB > 0) && result > 0);
+                     ((valA < 0 ^ valB < 0) && (valA > 0 ^ valB > 0) && result > 0);
         break;
     }
+    cpu.ZF = result == 0;
+    cpu.SF = result < 0;
     if(fn != CMP) {
         cpu.registers[rB] = result;
     }
@@ -425,7 +458,6 @@ static void jXX(int fn) {
     if(shouldJump || fn == JMP) {
         cpu.ipointer = destination;
     }
-    cpu.ipointer += 6 BYTE;
 }
 
 static void call() {
