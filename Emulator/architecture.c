@@ -11,13 +11,8 @@ static int32_t size;
 static status_t status = AOK;
 
 static void halt(void);
-static void rrmovl(void);
-static void irmovl(void);
-static void rmmovl(void);
-static void mrmovl(void);
-
+static void mov(int);
 static void op(int);
-
 static void jXX(int);
 
 static void call(void);
@@ -57,19 +52,19 @@ status_t execute() {
             break;
             case 0x20: /* rrmovl */
                 printf("rrmovl\n");
-                rrmovl();
+                mov(RR);
             break;
             case 0x30: /* irmovl */
                 printf("irmovl\n");
-                irmovl();
+                mov(IR);
             break;
             case 0x40: /* rmmovl */
                 printf("rmmovl\n");
-                rmmovl();
+                mov(RM);
             break;
             case 0x50: /* mrmovl */
                 printf("mrmovl\n");
-                mrmovl();
+                mov(MR);
             break;
             case 0x60: /* addl */
                 printf("addl\n");
@@ -309,65 +304,39 @@ static void halt() {
 }
 
 /*
-    ASCII Form: 20 rA rB
-    Length: 2 bytes
-    Behavior: rB <- rA
+
 */
-static void rrmovl() {
+void mov(int fn) {
     int32_t rA = memory[cpu.ipointer + 2] - '0';
     int32_t rB = memory[cpu.ipointer + 3] - '0';
-    printf("Copying contents [%d] of register %d into register %d\n", cpu.registers[rA], rA, rB);
-    cpu.registers[rB] = cpu.registers[rA];
-    cpu.ipointer += 2 BYTE;
-}
-
-/*
-    ASCII Form: 30 F rB 4bytevalue
-    Length: 6 bytes
-    Behavior: rB <- 4 byte value
-*/
-static void irmovl() {
-    int32_t rB = memory[cpu.ipointer + 3] - '0';
+    if(fn == RR) {
+        printf("Copying contents [%d] of register %d into register %d\n", cpu.registers[rA], rA, rB);
+        cpu.registers[rB] = cpu.registers[rA];
+        cpu.ipointer += 2 BYTE;
+        return;
+    }
     char *valStr = nt_strncpy(memory + cpu.ipointer + 2 BYTE, 4 BYTE);
     int32_t val = hexToDec(valStr);
-    printf("Storing value %d in register %d\n", val, rB);
-    cpu.registers[rB] = val;
+    switch(fn) {
+        case IR:
+            cpu.registers[rB] = val;
+            printf("Putting value %d into register %d\n", val, rB);
+        break;
+        case RM: {
+            int32_t dst = cpu.registers[rB] + val;
+            printf("Copying value [%d] from register %d into memory location %d\n", cpu.registers[rA], rA, dst);
+            putLong(val, dst);
+        }
+        break;
+        case MR: {
+            int32_t src = cpu.registers[rB] + val;
+            int32_t res = getLong(src);
+            printf("Copying value [%d] from memory location %d into register %d\n", res, src, rA);
+            cpu.registers[rA] = res;
+        }
+        break;
+    }
     free(valStr);
-    cpu.ipointer += 6 BYTE;
-}
-
-/*
-    ASCII form: 40 rA rB 4byteoffset
-    Length: 6 bytes
-    Behavior: mem[ rB + 4byteoffset ] <- rA
-*/
-static void rmmovl() {
-    int32_t rA = memory[cpu.ipointer + 2] - '0';
-    int32_t rB = memory[cpu.ipointer + 3] - '0';
-    char *offStr = nt_strncpy(memory + cpu.ipointer + 2 BYTE, 4 BYTE);
-    int32_t off = hexToDec(offStr);
-    int32_t dst = cpu.registers[rB] + off;
-    int32_t val = cpu.registers[rA];
-    printf("Copying value [%d] from register %d into memory location %d\n", val, rA, dst);
-    putLong(val, dst);
-    free(offStr);
-    cpu.ipointer += 6 BYTE;
-}
-
-/*
-    ASCII form: 50 rA rB 4byteoffset
-    Length: 6 bytes
-    Behavior: rA <- mem[ rB + 4byteoffset ]
-*/
-static void mrmovl() {
-    int32_t rA = memory[cpu.ipointer + 2] - '0';
-    int32_t rB = memory[cpu.ipointer + 3] - '0';
-    char *offStr = nt_strncpy(memory + cpu.ipointer + 2 BYTE, 4 BYTE);
-    int32_t off = hexToDec(offStr);
-    int32_t src = cpu.registers[rB] + off;
-    int32_t val = getLong(src);
-    printf("Copying value [%d] from memory location %d into register %d\n", val, src, rA);
-    cpu.registers[rA] = val;
     cpu.ipointer += 6 BYTE;
 }
 
@@ -456,6 +425,7 @@ static void jXX(int fn) {
     if(shouldJump || fn == JMP) {
         cpu.ipointer = destination;
     }
+    cpu.ipointer += 6 BYTE;
 }
 
 static void call() {

@@ -31,6 +31,11 @@
 #define JGE 5
 #define JG  6
 
+#define RR 0
+#define IR 1
+#define RM 2
+#define MR 3
+
 typedef int32_t reg_t;
 
 typedef enum status_e {

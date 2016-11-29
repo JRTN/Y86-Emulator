@@ -25,17 +25,6 @@ int searchStringArray(char **arr, char *target) {
     return -1;
 }
 
-char *strdup (const char *s) {
-    char *d = malloc (strlen (s) + 1);
-    if (d != NULL) strcpy (d,s);
-    return d;
-}
-
-void inplace_rev( char * s ) {
-  char t, *e = s + strlen(s);
-  while ( --e > s ) { t = *s;*s++=*e;*e=t; }
-}
-
 /*
     Converts a hexadecimal string representatiion of a 32 bit number
     into a 32 bit integer. 
@@ -46,9 +35,8 @@ void inplace_rev( char * s ) {
         are encountered; -1 otherwise.
 */
 int32_t hexToDec(char *hex) {
-    char *str = strdup(hex);
-    int32_t result = (int32_t) strtoul(str, NULL, 16);
-    free(str);
+    int32_t result;
+    sscanf(hex, "%x", &result);
     return result;
 }
 
