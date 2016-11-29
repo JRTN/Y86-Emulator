@@ -415,7 +415,7 @@ static void op(int fn) {
             */
             cpu.OF = (valA > 0 && valB > 0 && result < 0) ||
                      (valA < 0 && valB < 0 && result < 0) ||
-                     ((valA < 0 ^ valB < 0) && (valA > 0 ^ valB > 0) && result > 0);
+                     (( (valA < 0) ^ (valB < 0) ) && ( (valA > 0) ^ (valB > 0) ) && result > 0);
         break;
     }
     cpu.ZF = result == 0;
