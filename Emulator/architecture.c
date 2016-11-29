@@ -427,13 +427,14 @@ static void op(int fn) {
 }
 
 /*
-    
+    Performs a given jump operation based on the cpu flags.
+    Arguments:
+        int fn - The jump operation to be performed
 */
 static void jXX(int fn) {
     int shouldJump = 0;
     char *destString = nt_strncpy(memory + cpu.ipointer + 1 BYTE, 4 BYTE);
     int32_t destination = hexToDec(destString);
-    printf("Jumping to destination %s = %d\n", destString, destination);
     switch(fn) {
         case JLE:
             shouldJump = (cpu.SF ^ cpu.OF) || cpu.ZF;
@@ -456,6 +457,7 @@ static void jXX(int fn) {
     }
 
     if(shouldJump || fn == JMP) {
+        printf("Jumping to destination %s = %d\n", destString, destination);
         cpu.ipointer = destination;
     }
 }
