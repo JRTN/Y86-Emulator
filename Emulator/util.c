@@ -4,6 +4,18 @@
 #include <stdlib.h>
 #include "util.h"
 
+char *strdup (const char *s) {
+    char *d = malloc (strlen (s) + 1);   // Space for length plus nul
+    if (d == NULL) return NULL;          // No memory
+    strcpy (d,s);                        // Copy the characters
+    return d;                            // Return the new string
+}
+
+void inplace_rev( char * s ) {
+  char t, *e = s + strlen(s);
+  while ( --e > s ) { t = *s;*s++=*e;*e=t; }
+}
+
 /*
     Simple linear search that searches an array of strings for the 
     given target and returns the position of the first encounter.
@@ -37,6 +49,14 @@ int searchStringArray(char **arr, char *target) {
 int32_t hexToDec(char *hex) {
     int32_t result;
     sscanf(hex, "%x", &result);
+    return result;
+}
+
+int32_t hexToDecLittleEndian(char *hex) {
+    int32_t result = 0;
+
+    /* TODO: FIX THIS FUNCTION */
+    
     return result;
 }
 

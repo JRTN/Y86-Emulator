@@ -40,7 +40,7 @@ status_t execute() {
     while(status == AOK) {
         char *instruction = nt_strncpy(memory + cpu.ipointer, 2);
         int32_t n_instruction = hexToDec(instruction);
-        printf("%x\n", n_instruction);
+        printf("0x%x\n", n_instruction);
         switch(n_instruction) {
             case 0x00: /* nop */
                 printf("nop\n");
@@ -331,7 +331,7 @@ static void mov(int fn) {
         return;
     }
     char *valStr = nt_strncpy(memory + cpu.ipointer + 2 BYTE, 4 BYTE);
-    int32_t val = hexToDec(valStr);
+    int32_t val = hexToDecLittleEndian(valStr);
     switch(fn) {
         case IR:
             /*
@@ -460,7 +460,7 @@ static void op(int fn) {
 static void jXX(int fn) {
     int shouldJump = 0;
     char *destString = nt_strncpy(memory + cpu.ipointer + 1 BYTE, 4 BYTE);
-    int32_t destination = hexToDec(destString);
+    int32_t destination = hexToDecLittleEndian(destString);
     switch(fn) {
         case JLE:
             shouldJump = (cpu.SF ^ cpu.OF) || cpu.ZF;
