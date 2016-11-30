@@ -20,12 +20,8 @@ static void ret(void);
 
 static void pushl(void);
 static void popl(void);
-static void readb(void);
-static void readl(void);
-static void writeb(void);
-static void writel(void);
-
-static void movsbl(void);
+static void read(int);
+static void write(int);
 
 /*
     Executes the instructions stored in memory until the status of the machine
@@ -136,23 +132,23 @@ status_t execute() {
             break;
             case 0xC0: /* readb */
                 printf("readb\n");
-                readb();
+                read(B);
             break;
             case 0xC1: /* readl */
                 printf("readl\n");
-                readl();
+                read(L);
             break;
             case 0xD0: /* writeb */
                 printf("writeb\n");
-                writeb();
+                write(B);
             break;
             case 0xD1: /* writel */
                 printf("writel\n");
-                writel();
+                write(L);
             break;
             case 0xE0: /* movsbl */
                 printf("movsbl\n");
-                movsbl();
+                mov(SB);
             break;
             default:
                 status = INS;
@@ -357,9 +353,17 @@ static void mov(int fn) {
                 rA <- val(rB)
             */
             int32_t src = cpu.registers[rB] + val;
-            int32_t res = getLong(src);
+            int32_t res = memory[src];
             printf("Copying value [%d] from memory location %d into register %d\n", res, src, rA);
             cpu.registers[rA] = res;
+        }
+        break;
+        case SB: {
+            int32_t src = cpu.registers[rB] + val;
+            int8_t item = memory[src];
+            int32_t signExtended = item;
+            printf("Sign extending value [%d] and copying from memory location %d into register %d\n", item, src, rA);
+            cpu.registers[rA] = signExtended;
         }
         break;
     }
@@ -461,6 +465,9 @@ static void jXX(int fn) {
     int shouldJump = 0;
     char *destString = nt_strncpy(memory + cpu.ipointer + 1 BYTE, 4 BYTE);
     int32_t destination = hexToDecLittleEndian(destString);
+    if(destination >= size) {
+        status = ADR;
+    }
     switch(fn) {
         case JLE:
             shouldJump = (cpu.SF ^ cpu.OF) || cpu.ZF;
@@ -504,22 +511,38 @@ static void popl() {
     cpu.ipointer += 2 BYTE;
 }
 
-static void readb() {
+static void read(int fn) {
+    int32_t rA = memory[cpu.ipointer + 2] - '0';
+    char *displacementStr = nt_strncpy(memory + cpu.ipointer + 2 BYTE, 4 BYTE);
+    int32_t displacement = hexToDecLittleEndian(displacementStr);
+    int32_t dst = cpu.registers[rA] + displacement;
+    int in = 0;
+    char *str = (fn == B ? "%c" : "%d");
+    scanf(str, &in);
+    
+    int result;
+    if(fn == B) {
+        result = putByte(in, dst);
+    } else {
+        result = putLong(in, dst);
+    }
+
+    if(!result) {
+        status = ADR;
+    }
+    
     cpu.ipointer += 6 BYTE;
 }
 
-static void readl() {
-    cpu.ipointer += 6 BYTE;
-}
-
-static void writeb() {
-    cpu.ipointer += 6 BYTE;
-}
-
-static void writel() {
-    cpu.ipointer += 6 BYTE;
-}
-
-static void movsbl() {
+static void write(int fn) {
+    int32_t rA = memory[cpu.ipointer + 2] - '0';
+    char *displacementStr = nt_strncpy(memory + cpu.ipointer + 2 BYTE, 4 BYTE);
+    int32_t displacement = hexToDecLittleEndian(displacementStr);
+    int32_t src = cpu.registers[rA] + displacement;
+    if(src >= size) {
+        status = ADR;
+    }
+    int val = fn == B ? memory[src] : getLong(src);
+    printf("%d\n", val);
     cpu.ipointer += 6 BYTE;
 }

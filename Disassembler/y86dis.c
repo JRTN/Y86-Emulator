@@ -1,17 +1,9 @@
 #include <stdio.h>
 #include "loader.h"
-
-void disassemble(char *instructions) {
-
-}
+#include "disassembler.h"
 
 int main(int argc, char **argv) {
-    if(argc > 1) {
-        char *instructions = getInstructionsFromFile(argv[1]);
-        printf("%s\n", instructions);
-    } else {
-        printf("Need arguments\n");
-        return 1;
-    }
+    char **instructions = getInstructions(argv[1]);
+    disassemble(instructions);
     return 0;
 }

@@ -35,6 +35,10 @@
 #define IR 1
 #define RM 2
 #define MR 3
+#define SB 4
+
+#define B 0
+#define L 1
 
 typedef int32_t reg_t;
 

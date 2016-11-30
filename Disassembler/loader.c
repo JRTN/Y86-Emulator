@@ -2,6 +2,7 @@
 #include <malloc.h>
 #include <string.h>
 #include <stdint.h>
+#include <stdlib.h>
 
 #include "loader.h"
 #include "tokenizer.h"
@@ -10,15 +11,28 @@
 static char **tokenizeProgram(char*);
 static char *getFileContents(char*);
 
-char *getInstructionsFromFile(char* filename) {
-    char *result = NULL;
-    char *program = getFileContents(filename);
-    char **programTokens = tokenizeProgram(program);
-    int textPos = searchStringArray(programTokens, ".text");
-    if(textPos >= 0) {
-        result = programTokens[textPos + 2];
+/*
+    Calls the appropriate functions to perform the following steps:
+        1. Attempt to open and retrive the contents of a file containing the program
+        2. Tokenize the contents of the file
+        3. Determine the size of the program's memory space and initializes the
+           architecture with the appropriate size
+        4. Inserts the program data into memory
+    Arguments:
+        char *fileName - The name of the file containing the program.
+    Return:
+        1 if the file was successfully opened and its contents loaded into memory;
+        0 if there were any issues.
+*/
+char **getInstructions(char *fileName) {
+    char *programString = getFileContents(fileName);
+    if(!programString) {
+        fprintf(stderr, "ERROR: Failed to open file %s, perhaps it does not exist?\n", fileName);
+        return NULL;
     }
-    return result;
+    char **programTokens = tokenizeProgram(programString);
+    free(programString);
+    return programTokens;
 }
 
 /*
