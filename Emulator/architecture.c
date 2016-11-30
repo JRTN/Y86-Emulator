@@ -100,7 +100,8 @@ status_t execute() {
             break;
             case 0x73: /* je */
                 printf("je\n");
-                jXX(JE);
+                //jXX(JE);
+                status = HLT;
             break;
             case 0x74: /* jne */
                 printf("jne\n");
@@ -336,6 +337,7 @@ static void mov(int fn) {
             */
             cpu.registers[rB] = val;
             printf("Putting value %d into register %d\n", val, rB);
+            printf("rB: %d\n", cpu.registers[rB]);
         break;
         case RM: {
             /*
@@ -360,10 +362,12 @@ static void mov(int fn) {
         break;
         case SB: {
             int32_t src = cpu.registers[rB] + val;
+            printf("Val: %d rB: %d\n", val, cpu.registers[rB]);
             int8_t item = memory[src];
             int32_t signExtended = item;
             printf("Sign extending value [%d] and copying from memory location %d into register %d\n", item, src, rA);
             cpu.registers[rA] = signExtended;
+            printf("rA: %d\n", signExtended);
         }
         break;
     }
@@ -402,7 +406,9 @@ static void op(int fn) {
         break;
         case SUB:
         case CMP:
+            printf("Comparing registers rA:%d rB:%d\n", rA, rB);
             result = valB - valA;
+            printf("valB - valA = %d\n", result);
             /*
                 Overflow if:
                     valB is negative, valA is positive, and result is positive
@@ -453,6 +459,7 @@ static void op(int fn) {
     if(fn != CMP) {
         cpu.registers[rB] = result;
     }
+    printCPU();
     cpu.ipointer += 2 BYTE;
 }
 
@@ -492,6 +499,8 @@ static void jXX(int fn) {
     if(shouldJump || fn == JMP) {
         printf("Jumping to destination %s = %d\n", destString, destination);
         cpu.ipointer = destination;
+    } else {
+        cpu.ipointer += 5 BYTE;
     }
 }
 

@@ -5,7 +5,7 @@
 #include "disassembler.h"
 #include "util.h"
 
-#define ADDR (currPos / 2)
+#define ADDR startAddr + (currPos / 2)
 
 static int32_t startAddr;
 static int32_t currPos;
@@ -89,7 +89,7 @@ static void jXX(int fn) {
             type = "jl";
         break;
         case JE:
-            type = "jl";
+            type = "je";
         break;
         case JNE:
             type = "jne";
@@ -254,6 +254,7 @@ void disassemble(char **programTokens) {
     startAddr = atoi(programTokens[textPos + 1]);
     instructions = programTokens[textPos + 2];
     printf("Instructions starting at address 0x%X:\n%s\n", startAddr, instructions);
+    printf("Disassembled: \n");
     translate();
     free(programTokens);
 }
