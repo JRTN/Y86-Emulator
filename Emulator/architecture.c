@@ -306,24 +306,25 @@ static void halt() {
 /*
     Performs mov instructions of the given type. There are 4 types of mov:
         1. RR - Register to Register move
-                rB <- rA
                 2 byte length
         2. IR - Immediate to Register move
-                rB <- val
                 6 byte length
         3. RM - Register to Memory move
-                val(rB) <- rA
                 6 byte length
         4. MR - Memory to Register move
-                rA <- val(rB)
+                6 byte length
     Arguments:
         int fn - The type of mov instruction to be performed
                 
 */
-void mov(int fn) {
+static void mov(int fn) {
     int32_t rA = memory[cpu.ipointer + 2] - '0';
     int32_t rB = memory[cpu.ipointer + 3] - '0';
     if(fn == RR) {
+        /*
+            Register to Register move
+            Behavior: rB <- rA
+        */
         printf("Copying contents [%d] of register %d into register %d\n", cpu.registers[rA], rA, rB);
         cpu.registers[rB] = cpu.registers[rA];
         cpu.ipointer += 2 BYTE;
@@ -333,16 +334,28 @@ void mov(int fn) {
     int32_t val = hexToDec(valStr);
     switch(fn) {
         case IR:
+            /*
+                Immediate to Register move
+                Behavior: rB <- val
+            */
             cpu.registers[rB] = val;
             printf("Putting value %d into register %d\n", val, rB);
         break;
         case RM: {
+            /*
+                Register to Memory move
+                Behavior: val(rB) <- rA
+            */
             int32_t dst = cpu.registers[rB] + val;
             printf("Copying value [%d] from register %d into memory location %d\n", cpu.registers[rA], rA, dst);
             putLong(val, dst);
         }
         break;
         case MR: {
+            /*
+                Memory to Register move
+                rA <- val(rB)
+            */
             int32_t src = cpu.registers[rB] + val;
             int32_t res = getLong(src);
             printf("Copying value [%d] from memory location %d into register %d\n", res, src, rA);
@@ -397,10 +410,16 @@ static void op(int fn) {
         break;
         case AND:
             result = valB && valA;
+            /*
+                There can't be overflow from 'and' operations.
+            */
             cpu.OF = 0;
         break;
         case XOR:
             result = valB ^ valA;
+            /*
+                There can't be overflow from 'xor' operations
+            */
             cpu.OF = 0;
         break;
         case MUL:
@@ -418,8 +437,15 @@ static void op(int fn) {
                      (( (valA < 0) ^ (valB < 0) ) && ( (valA > 0) ^ (valB > 0) ) && result > 0);
         break;
     }
+    /*
+        ZF is set if rA OP rB is 0
+        SF is set if rA OP rB is less than 0
+    */
     cpu.ZF = result == 0;
     cpu.SF = result < 0;
+    /*
+        cmp does not change registers; it only sets flags
+    */
     if(fn != CMP) {
         cpu.registers[rB] = result;
     }
