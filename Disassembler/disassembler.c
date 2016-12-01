@@ -5,7 +5,7 @@
 #include "disassembler.h"
 #include "util.h"
 
-#define ADDR startAddr + (currPos / 2)
+#define ADDR startAddr + currPos
 
 static int32_t startAddr;
 static int32_t currPos;
@@ -101,7 +101,7 @@ static void jXX(int fn) {
             type = "jg";
         break;
     }
-    printf("0x%-5X| %s 0x%X\n", ADDR, type, destination);
+    printf("0x%-5X| %s 0x%X\n", ADDR, type, destination BYTE);
     currPos += 5 BYTE;
 }
 

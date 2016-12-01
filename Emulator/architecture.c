@@ -1,9 +1,12 @@
 #include <string.h>
 #include <malloc.h>
 #include <ctype.h>
+#include <time.h>
 
 #include "architecture.h"
 #include "util.h"
+
+#define clear() printf("\033[H\033[J")
 
 static cpu_t cpu;
 static char *memory;
@@ -23,6 +26,11 @@ static void popl(void);
 static void read(int);
 static void write(int);
 
+void waitFor (unsigned int secs) {
+    unsigned int retTime = time(0) + secs;   // Get finishing time.
+    while (time(0) < retTime);               // Loop until it arrives.
+}
+
 /*
     Executes the instructions stored in memory until the status of the machine
     is no longer AOK. There are three stop conditions:
@@ -36,126 +44,100 @@ status_t execute() {
     while(status == AOK) {
         char *instruction = nt_strncpy(memory + cpu.ipointer, 2);
         int32_t n_instruction = hexToDec(instruction);
-        printf("0x%x\n", n_instruction);
+        //printf("0x%x\n", n_instruction);
         switch(n_instruction) {
             case 0x00: /* nop */
-                printf("nop\n");
                 cpu.ipointer += 1 BYTE;
             break;
             case 0x10: /* halt */
-                printf("halt\n");
                 halt();
             break;
             case 0x20: /* rrmovl */
-                printf("rrmovl\n");
                 mov(RR);
             break;
             case 0x30: /* irmovl */
-                printf("irmovl\n");
                 mov(IR);
             break;
             case 0x40: /* rmmovl */
-                printf("rmmovl\n");
                 mov(RM);
             break;
             case 0x50: /* mrmovl */
-                printf("mrmovl\n");
                 mov(MR);
             break;
             case 0x60: /* addl */
-                printf("addl\n");
                 op(ADD);
             break;
             case 0x61: /* subl */
-                printf("subl\n");
                 op(SUB);
             break;
             case 0x62: /* andl */
-                printf("andl\n");
                 op(AND);
             break;
             case 0x63: /* xorl */
-                printf("xorl\n");
                 op(XOR);
             break;
             case 0x64: /* mull */
-                printf("mull\n");
                 op(MUL);
             break;
             case 0x65: /* cmpl */
-                printf("cmpl\n");
                 op(CMP);
             break;
             case 0x70: /* jmp */
-                printf("jmp\n");
                 jXX(JMP);
             break;
             case 0x71: /* jle */
-                printf("jle\n");
                 jXX(JLE);
             break;
             case 0x72: /* jl */
-                printf("jl\n");
                 jXX(JL);
             break;
             case 0x73: /* je */
-                printf("je\n");
-                //jXX(JE);
-                status = HLT;
+                jXX(JE);
             break;
             case 0x74: /* jne */
-                printf("jne\n");
                 jXX(JNE);
             break;
             case 0x75: /* jge */
-                printf("jge\n");
                 jXX(JGE);
             break;
             case 0x76: /* jg */
-                printf("jg\n");
                 jXX(JG);
             break;
             case 0x80: /* call */
-                printf("call\n");
                 call();
             break;
             case 0x90: /* ret */
-                printf("ret\n");
                 ret();
             break;
             case 0xA0: /* pushl */
-                printf("pushl\n");
                 pushl();
             break;
             case 0xB0: /* popl */
-                printf("popl\n");
                 popl();
             break;
             case 0xC0: /* readb */
-                printf("readb\n");
                 read(B);
             break;
             case 0xC1: /* readl */
-                printf("readl\n");
                 read(L);
             break;
             case 0xD0: /* writeb */
-                printf("writeb\n");
                 write(B);
             break;
             case 0xD1: /* writel */
-                printf("writel\n");
                 write(L);
             break;
             case 0xE0: /* movsbl */
-                printf("movsbl\n");
                 mov(SB);
             break;
             default:
                 status = INS;
                 printf("Unknown Instruction Encountered\n");
         }
-        free(instruction);
+        /*free(instruction);
+        printCPU();
+        waitFor(5);
+        clear();*/
     }
     return status;
 }
@@ -170,9 +152,6 @@ status_t execute() {
 int initialize(int32_t amt) {
     size = amt;
     memory = malloc(amt);
-    if(memory) {
-        printf("Allocated %d bytes of memory for the memory space\n", amt);
-    }
     return memory != NULL;
 }
 
@@ -322,7 +301,7 @@ static void mov(int fn) {
             Register to Register move
             Behavior: rB <- rA
         */
-        printf("Copying contents [%d] of register %d into register %d\n", cpu.registers[rA], rA, rB);
+        //printf("Copying contents [%d] of register %d into register %d\n", cpu.registers[rA], rA, rB);
         cpu.registers[rB] = cpu.registers[rA];
         cpu.ipointer += 2 BYTE;
         return;
@@ -336,8 +315,8 @@ static void mov(int fn) {
                 Behavior: rB <- val
             */
             cpu.registers[rB] = val;
-            printf("Putting value %d into register %d\n", val, rB);
-            printf("rB: %d\n", cpu.registers[rB]);
+            //printf("Putting value %d into register %d\n", val, rB);
+            //printf("rB: %d\n", cpu.registers[rB]);
         break;
         case RM: {
             /*
@@ -345,7 +324,7 @@ static void mov(int fn) {
                 Behavior: val(rB) <- rA
             */
             int32_t dst = cpu.registers[rB] + val;
-            printf("Copying value [%d] from register %d into memory location %d\n", cpu.registers[rA], rA, dst);
+            //printf("Copying value [%d] from register %d into memory location %d\n", cpu.registers[rA], rA, dst);
             putLong(val, dst);
         }
         break;
@@ -356,18 +335,17 @@ static void mov(int fn) {
             */
             int32_t src = cpu.registers[rB] + val;
             int32_t res = memory[src];
-            printf("Copying value [%d] from memory location %d into register %d\n", res, src, rA);
+            //printf("Copying value [%d] from memory location %d into register %d\n", res, src, rA);
             cpu.registers[rA] = res;
         }
         break;
         case SB: {
             int32_t src = cpu.registers[rB] + val;
-            printf("Val: %d rB: %d\n", val, cpu.registers[rB]);
+            //printf("Val: %d rB: %d\n", val, cpu.registers[rB]);
             int8_t item = memory[src];
             int32_t signExtended = item;
-            printf("Sign extending value [%d] and copying from memory location %d into register %d\n", item, src, rA);
+            //printf("Sign extending value [%d] from memory location %d into register %d\n", item, src, rA);
             cpu.registers[rA] = signExtended;
-            printf("rA: %d\n", signExtended);
         }
         break;
     }
@@ -401,14 +379,14 @@ static void op(int fn) {
                     or
                     valA is negative, valB is negative, and result is positive
             */
+            //printf("r%d + r%d = %d\n", rA, rB, result);
             cpu.OF = (valA > 0 && valB > 0 && result < 0) ||
                      (valA < 0 && valB < 0 && result > 0);
         break;
         case SUB:
         case CMP:
-            printf("Comparing registers rA:%d rB:%d\n", rA, rB);
             result = valB - valA;
-            printf("valB - valA = %d\n", result);
+            //printf("r%d - r%d = %d\n", rA, rB, result);
             /*
                 Overflow if:
                     valB is negative, valA is positive, and result is positive
@@ -420,6 +398,7 @@ static void op(int fn) {
         break;
         case AND:
             result = valB && valA;
+            //printf("r%d && r%d = %d\n", rA, rB, result);
             /*
                 There can't be overflow from 'and' operations.
             */
@@ -427,6 +406,7 @@ static void op(int fn) {
         break;
         case XOR:
             result = valB ^ valA;
+            //printf("r%d ^ r%d = %d\n", rA, rB, result);
             /*
                 There can't be overflow from 'xor' operations
             */
@@ -434,6 +414,7 @@ static void op(int fn) {
         break;
         case MUL:
             result = valB * valA;
+            //printf("r%d * r%d = %d\n", rA, rB, result);
             /*
                 Overflow if:
                     valA is positive, valB is positive, and result is negative
@@ -459,7 +440,6 @@ static void op(int fn) {
     if(fn != CMP) {
         cpu.registers[rB] = result;
     }
-    printCPU();
     cpu.ipointer += 2 BYTE;
 }
 
@@ -497,8 +477,8 @@ static void jXX(int fn) {
     }
 
     if(shouldJump || fn == JMP) {
-        printf("Jumping to destination %s = %d\n", destString, destination);
-        cpu.ipointer = destination;
+        //printf("Jumping to destination 0x%X (%d)\n", destination BYTE, destination BYTE);
+        cpu.ipointer = destination BYTE;
     } else {
         cpu.ipointer += 5 BYTE;
     }
@@ -552,6 +532,6 @@ static void write(int fn) {
         status = ADR;
     }
     int val = fn == B ? memory[src] : getLong(src);
-    printf("%d\n", val);
+    printf("%c", val);
     cpu.ipointer += 6 BYTE;
 }
