@@ -44,7 +44,6 @@ status_t execute() {
     while(status == AOK) {
         char *instruction = nt_strncpy(memory + cpu.ipointer, 2);
         int32_t n_instruction = hexToDec(instruction);
-        //printf("0x%x\n", n_instruction);
         switch(n_instruction) {
             case 0x00: /* nop */
                 cpu.ipointer += 1 BYTE;
@@ -134,10 +133,10 @@ status_t execute() {
                 status = INS;
                 printf("Unknown Instruction Encountered\n");
         }
-        /*free(instruction);
-        printCPU();
-        waitFor(5);
-        clear();*/
+        free(instruction);
+        //printCPU();
+        //waitFor(1);
+        //clear();
     }
     return status;
 }
@@ -301,7 +300,6 @@ static void mov(int fn) {
             Register to Register move
             Behavior: rB <- rA
         */
-        //printf("Copying contents [%d] of register %d into register %d\n", cpu.registers[rA], rA, rB);
         cpu.registers[rB] = cpu.registers[rA];
         cpu.ipointer += 2 BYTE;
         return;
@@ -315,8 +313,6 @@ static void mov(int fn) {
                 Behavior: rB <- val
             */
             cpu.registers[rB] = val;
-            //printf("Putting value %d into register %d\n", val, rB);
-            //printf("rB: %d\n", cpu.registers[rB]);
         break;
         case RM: {
             /*
@@ -324,7 +320,6 @@ static void mov(int fn) {
                 Behavior: val(rB) <- rA
             */
             int32_t dst = cpu.registers[rB] + val;
-            //printf("Copying value [%d] from register %d into memory location %d\n", cpu.registers[rA], rA, dst);
             putLong(val, dst);
         }
         break;
@@ -335,16 +330,13 @@ static void mov(int fn) {
             */
             int32_t src = cpu.registers[rB] + val;
             int32_t res = memory[src];
-            //printf("Copying value [%d] from memory location %d into register %d\n", res, src, rA);
             cpu.registers[rA] = res;
         }
         break;
         case SB: {
             int32_t src = cpu.registers[rB] + val;
-            //printf("Val: %d rB: %d\n", val, cpu.registers[rB]);
             int8_t item = memory[src];
             int32_t signExtended = item;
-            //printf("Sign extending value [%d] from memory location %d into register %d\n", item, src, rA);
             cpu.registers[rA] = signExtended;
         }
         break;
@@ -379,14 +371,12 @@ static void op(int fn) {
                     or
                     valA is negative, valB is negative, and result is positive
             */
-            //printf("r%d + r%d = %d\n", rA, rB, result);
             cpu.OF = (valA > 0 && valB > 0 && result < 0) ||
                      (valA < 0 && valB < 0 && result > 0);
         break;
         case SUB:
         case CMP:
             result = valB - valA;
-            //printf("r%d - r%d = %d\n", rA, rB, result);
             /*
                 Overflow if:
                     valB is negative, valA is positive, and result is positive
@@ -398,7 +388,6 @@ static void op(int fn) {
         break;
         case AND:
             result = valB && valA;
-            //printf("r%d && r%d = %d\n", rA, rB, result);
             /*
                 There can't be overflow from 'and' operations.
             */
@@ -406,7 +395,6 @@ static void op(int fn) {
         break;
         case XOR:
             result = valB ^ valA;
-            //printf("r%d ^ r%d = %d\n", rA, rB, result);
             /*
                 There can't be overflow from 'xor' operations
             */
@@ -414,7 +402,6 @@ static void op(int fn) {
         break;
         case MUL:
             result = valB * valA;
-            //printf("r%d * r%d = %d\n", rA, rB, result);
             /*
                 Overflow if:
                     valA is positive, valB is positive, and result is negative
@@ -477,7 +464,6 @@ static void jXX(int fn) {
     }
 
     if(shouldJump || fn == JMP) {
-        //printf("Jumping to destination 0x%X (%d)\n", destination BYTE, destination BYTE);
         cpu.ipointer = destination BYTE;
     } else {
         cpu.ipointer += 5 BYTE;
