@@ -44,6 +44,7 @@ status_t execute() {
     while(status == AOK) {
         char *instruction = nt_strncpy(memory + cpu.ipointer, 2);
         int32_t n_instruction = hexToDec(instruction);
+        //printf("Current Instruction: 0x%X\n", n_instruction);
         switch(n_instruction) {
             case 0x00: /* nop */
                 cpu.ipointer += 1 BYTE;
@@ -134,9 +135,9 @@ status_t execute() {
                 printf("Unknown Instruction Encountered\n");
         }
         free(instruction);
-        //printCPU();
-        //waitFor(1);
-        //clear();
+        /*printCPU();
+        waitFor(1);
+        clear();*/
     }
     return status;
 }
@@ -151,6 +152,7 @@ status_t execute() {
 int initialize(int32_t amt) {
     size = amt;
     memory = malloc(amt);
+    printf("Allocated %d bytes of memory for address space\n", amt);
     return memory != NULL;
 }
 
@@ -465,25 +467,53 @@ static void jXX(int fn) {
 
     if(shouldJump || fn == JMP) {
         cpu.ipointer = destination BYTE;
+        //printf("Jumping to location %x\n", destination);
     } else {
         cpu.ipointer += 5 BYTE;
     }
 }
 
-static void call() {
-    cpu.ipointer += 5 BYTE;
-}
-
-static void ret() {
-    cpu.ipointer += 1 BYTE;
+static void push(int32_t data) {
+    cpu.registers[ESP] -= 4;
+    printf("Pushing value %d onto the stack\n", data);
+    printf("ESP: %d\n", cpu.registers[ESP]);
+    putLong(data, cpu.registers[ESP]);
 }
 
 static void pushl() {
+    int32_t rA = memory[cpu.ipointer + 1 BYTE] - '0';
+    push(cpu.registers[rA]);
     cpu.ipointer += 2 BYTE;
 }
 
+int32_t pop() {
+    int32_t res = getLong(cpu.registers[ESP]);
+    printf("Popping value %d from the stack\n", res);
+    cpu.registers[ESP] -= 4;
+    return res;
+}
+
 static void popl() {
+    int32_t rA = memory[cpu.ipointer + 1 BYTE] - '0';
+    cpu.registers[rA] = pop();
     cpu.ipointer += 2 BYTE;
+}
+
+static void call() {
+    char *destinationStr = nt_strncpy(memory + cpu.ipointer + 1 BYTE, 4 BYTE);
+    int32_t destination = hexToDecLittleEndian(destinationStr);
+    printf("Calling memory at location %d\n", destination);
+    free(destinationStr);
+    push(cpu.ipointer + 5 BYTE); /* Push return address onto stack */
+    cpu.ipointer = destination;
+    //cpu.ipointer += 5 BYTE;
+}
+
+static void ret() {
+    int32_t returnAddr = pop();
+    printf("Returning to address %d\n", returnAddr);
+    cpu.ipointer = returnAddr;
+    //cpu.ipointer += 1 BYTE;
 }
 
 static void read(int fn) {
