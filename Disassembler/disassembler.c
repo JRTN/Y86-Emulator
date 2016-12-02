@@ -251,7 +251,7 @@ void disassemble(char **programTokens) {
         fprintf(stderr, "ERROR: No .text directive in the file.\n");
         return;
     }
-    startAddr = atoi(programTokens[textPos + 1]);
+    startAddr = hexToDec(programTokens[textPos + 1]);
     instructions = programTokens[textPos + 2];
     printf("Instructions starting at address 0x%X:\n%s\n", startAddr, instructions);
     printf("Disassembled: \n");
