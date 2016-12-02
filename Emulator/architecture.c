@@ -95,7 +95,7 @@ int putString(char *str, int32_t addr) {
         is out of range.
 */
 int putLong(int32_t num, int32_t addr) {
-    if(addr + 4 >= size) {
+    if(addr + 4 > size) {
         return 0;
     }
 
@@ -115,7 +115,7 @@ int putLong(int32_t num, int32_t addr) {
         are no issues; 0 otherwise (which can also be a valid return)
 */
 int32_t getLong(int32_t addr) {
-    if(addr + 4 >= size) {
+    if(addr + 4 > size) {
         return 0;
     }
     int32_t *loc = (int32_t*)(&memory[addr]);
@@ -132,7 +132,7 @@ int32_t getLong(int32_t addr) {
         0 otherwise
 */
 int putByte(char byte, int32_t addr) {
-    if(addr >= size) {
+    if(addr > size) {
         return 0;
     }
     memory[addr] = byte;
@@ -183,8 +183,9 @@ static void halt() {
 static void mov(int fn) {
     byteParts_t parts;
     parts.c = memory[cpu.ipointer + 1];
-    int rA = parts.parts.first;
-    int rB = parts.parts.second;
+    int rA = parts.parts.second;
+    int rB = parts.parts.first;
+    if(DEBUG) printf("rA:%d rB:%d\n", rA, rB);
     if(fn == RR) {
         /*
             Register to Register move
@@ -225,7 +226,9 @@ static void mov(int fn) {
         case SB: {
             int32_t src = cpu.registers[rB] + val;
             int8_t item = memory[src];
-            cpu.registers[rA] = (int32_t) item;
+            int32_t extended = (int32_t) item;
+            if(DEBUG) printf("Sign extended 0x%x to 0x%x\n", item, extended);
+            cpu.registers[rA] = item;
         }
         break;
     }
@@ -246,8 +249,8 @@ static void mov(int fn) {
 static void op(int fn) {
     byteParts_t parts;
     parts.c = memory[cpu.ipointer + 1];
-    int rA = parts.parts.first;
-    int rB = parts.parts.second;
+    int rA = parts.parts.second;
+    int rB = parts.parts.first;
     int32_t result = 0;
     int32_t valA = cpu.registers[rA];
     int32_t valB = cpu.registers[rB];
@@ -266,6 +269,7 @@ static void op(int fn) {
         case SUB:
         case CMP:
             result = valB - valA;
+            if(DEBUG) printf("[rB]%d - [rA]%d = [result]%d\n", valB, valA, result);
             /*
                 Overflow if:
                     valB is negative, valA is positive, and result is positive
@@ -373,7 +377,7 @@ static void push(int32_t data) {
 static void pushl() {
     byteParts_t parts;
     parts.c = memory[cpu.ipointer + 1];
-    int rA = parts.parts.first;
+    int rA = parts.parts.second;
     push(cpu.registers[rA]);
     cpu.ipointer += 2;
 }
@@ -381,42 +385,42 @@ static void pushl() {
 int32_t pop() {
     int32_t res = getLong(cpu.registers[ESP]);
     if(DEBUG) printf("Popping value 0x%x from the stack\n", res);
-    cpu.registers[ESP] -= 4;
+    cpu.registers[ESP] += 4;
     return res;
 }
 
 static void popl() {
     byteParts_t parts;
     parts.c = memory[cpu.ipointer + 1];
-    int rA = parts.parts.first;
+    int rA = parts.parts.second;
     cpu.registers[rA] = pop();
     cpu.ipointer += 2;
 }
 
 static void call() {
     int32_t destination = getLong(cpu.ipointer + 1);
-    if(DEBUG) printf("Calling memory at location %d\n", destination);
+    if(DEBUG) printf("Calling location 0x%x\n", destination);
     push(cpu.ipointer + 5); /* Push return address onto stack */
     jump(destination);
-    //cpu.ipointer += 5;
 }
 
 static void ret() {
     int32_t returnAddr = pop();
     if(DEBUG) printf("Returning to address %d\n", returnAddr);
     jump(returnAddr);
-    //cpu.ipointer += 1;
 }
 
 static void read(int fn) {
     byteParts_t parts;
     parts.c = memory[cpu.ipointer + 1];
-    int rA = parts.parts.first;
+    int rA = parts.parts.second;
     int32_t displacement = getLong(cpu.ipointer + 2);
     int32_t dst = cpu.registers[rA] + displacement;
     int in = 0;
     char *str = (fn == B ? "%c" : "%d");
-    scanf(str, &in);
+    
+    int set = scanf(str, &in);
+    cpu.ZF = set == EOF;
     
     int result;
     if(fn == B) {
@@ -435,7 +439,7 @@ static void read(int fn) {
 static void write(int fn) {
     byteParts_t parts;
     parts.c = memory[cpu.ipointer + 1];
-    int rA = parts.parts.first;
+    int rA = parts.parts.second;
     int32_t displacement = getLong(cpu.ipointer + 2);
     int32_t src = cpu.registers[rA] + displacement;
     if(src >= size) {
@@ -578,7 +582,7 @@ status_t execute() {
         }
         if(DEBUG) {
             //printCPU();
-            waitFor(2);
+            //waitFor(2);
             //clear();
         }
         

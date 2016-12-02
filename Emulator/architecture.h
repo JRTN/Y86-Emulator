@@ -5,6 +5,9 @@
 
 #define NUM_REGISTERS 8
 
+#define LOW(x) (x & 0xF0) >> 4
+#define HIGH(x) x & 0x0F
+
 #define EAX 0
 #define ECX 1
 #define EDX 2
