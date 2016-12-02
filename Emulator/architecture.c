@@ -8,6 +8,7 @@
 
 #define clear() printf("\033[H\033[J")
 #define DEBUG 0
+#define CALL 1
 
 static cpu_t cpu;
 static char *memory;
@@ -95,7 +96,7 @@ int putString(char *str, int32_t addr) {
         is out of range.
 */
 int putLong(int32_t num, int32_t addr) {
-    if(addr + 4 > size) {
+    if(addr + 4 >= size) {
         return 0;
     }
 
@@ -115,7 +116,7 @@ int putLong(int32_t num, int32_t addr) {
         are no issues; 0 otherwise (which can also be a valid return)
 */
 int32_t getLong(int32_t addr) {
-    if(addr + 4 > size) {
+    if(addr + 4 >= size) {
         return 0;
     }
     int32_t *loc = (int32_t*)(&memory[addr]);
@@ -132,7 +133,7 @@ int32_t getLong(int32_t addr) {
         0 otherwise
 */
 int putByte(char byte, int32_t addr) {
-    if(addr > size) {
+    if(addr >= size) {
         return 0;
     }
     memory[addr] = byte;
@@ -158,6 +159,13 @@ void printMemory() {
         } else {
             printf("-");
         }
+    }
+}
+
+static void checkbound(int32_t addr) {
+    if(addr >= size) {
+        printf("Attemped to access out of bound address 0x%x\n", addr);
+        status = ADR;
     }
 }
 
@@ -323,10 +331,6 @@ static void op(int fn) {
     cpu.ipointer += 2;
 }
 
-static void jump(int32_t destination) {
-    cpu.ipointer = destination;
-}
-
 /*
     Performs a given jump operation based on the cpu flags.
     Arguments:
@@ -335,9 +339,7 @@ static void jump(int32_t destination) {
 static void jXX(int fn) {
     int shouldJump = 0;
     int32_t destination = getLong(cpu.ipointer + 1);
-    if(destination >= size) {
-        status = ADR;
-    }
+    checkbound(destination);
     switch(fn) {
         case JLE:
             shouldJump = (cpu.SF ^ cpu.OF) || cpu.ZF;
@@ -399,15 +401,16 @@ static void popl() {
 
 static void call() {
     int32_t destination = getLong(cpu.ipointer + 1);
-    if(DEBUG) printf("Calling location 0x%x\n", destination);
+    checkbound(destination);
+    if(DEBUG || CALL) printf("Calling location 0x%x\n", destination);
     push(cpu.ipointer + 5); /* Push return address onto stack */
-    jump(destination);
+    cpu.ipointer = destination;
 }
 
 static void ret() {
     int32_t returnAddr = pop();
-    if(DEBUG) printf("Returning to address %d\n", returnAddr);
-    jump(returnAddr);
+    if(DEBUG || CALL) printf("Returning to address 0x%x\n", returnAddr);
+    cpu.ipointer = returnAddr;
 }
 
 static void read(int fn) {
@@ -416,18 +419,23 @@ static void read(int fn) {
     int rA = parts.parts.second;
     int32_t displacement = getLong(cpu.ipointer + 2);
     int32_t dst = cpu.registers[rA] + displacement;
-    int in = 0;
-    char *str = (fn == B ? "%c" : "%d");
     
-    int set = scanf(str, &in);
-    cpu.ZF = set == EOF;
-    
+    int set;
     int result;
     if(fn == B) {
-        result = putByte(in, dst);
+        char c = 0;
+        set = scanf("%c", &c);
+        result = putByte(c, dst);
+        if(DEBUG) printf("Put Byte 0x%x at location %d\n", c, dst);
     } else {
-        result = putLong(in, dst);
+        int32_t l = 0;
+        set = scanf("%d", &l);
+        result = putLong(l, dst);
+        if(DEBUG) printf("Put Long 0x%x at location %d\n", l, dst);
     }
+
+    cpu.ZF = set == EOF;
+    if(DEBUG) printf("ZF set to %d\n", cpu.ZF);
 
     if(!result) {
         status = ADR;
@@ -442,9 +450,7 @@ static void write(int fn) {
     int rA = parts.parts.second;
     int32_t displacement = getLong(cpu.ipointer + 2);
     int32_t src = cpu.registers[rA] + displacement;
-    if(src >= size) {
-        status = ADR;
-    }
+    checkbound(src);
     int val = fn == B ? memory[src] : getLong(src);
     printf("%c", val);
     cpu.ipointer += 6;
@@ -462,7 +468,7 @@ static void write(int fn) {
 status_t execute() {
     while(status == AOK) {
         unsigned char instruction = (unsigned char)memory[cpu.ipointer];
-        if(DEBUG) printf("ipointer: 0x%x\n", cpu.ipointer);
+        if(DEBUG || CALL) printf("ipointer: 0x%x\n", cpu.ipointer);
         switch(instruction) {
             case 0x00: /* nop */
                 if(DEBUG) printf("0x00 nop\n");
@@ -582,7 +588,7 @@ status_t execute() {
         }
         if(DEBUG) {
             //printCPU();
-            //waitFor(2);
+            //waitFor(1);
             //clear();
         }
         

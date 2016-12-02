@@ -40,13 +40,6 @@ int32_t hexToDec(char *hex) {
     return result;
 }
 
-int32_t hexToDecLittleEndian(char *hex) {
-    int32_t result = 0;
-    result = hexToDec(hex);
-    result = ( (result & 0xff) << 24 ) | ( (result & 0xff00) << 8 ) | ( (result & 0xff0000) >> 8 ) | ( (result >> 24) & 0xff ); /* Trust me */
-    return result;
-}
-
 /*
     Copies the first n characters from a c string and creates a new null-terminated c string
     out of the copied characters.
