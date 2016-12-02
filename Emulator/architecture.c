@@ -13,133 +13,9 @@ static char *memory;
 static int32_t size;
 static status_t status = AOK;
 
-static void halt(void);
-static void mov(int);
-static void op(int);
-static void jXX(int);
-
-static void call(void);
-static void ret(void);
-
-static void pushl(void);
-static void popl(void);
-static void read(int);
-static void write(int);
-
 void waitFor (unsigned int secs) {
     unsigned int retTime = time(0) + secs;   // Get finishing time.
     while (time(0) < retTime);               // Loop until it arrives.
-}
-
-/*
-    Executes the instructions stored in memory until the status of the machine
-    is no longer AOK. There are three stop conditions:
-    HLT - This is a normal halt and is specified by the user in the machine instructions
-    ADR - An invalid address has been encountered
-    INS - An invalid Instruction has been encountered
-    Return:
-        The status of the machine when it stops.
-*/
-status_t execute() {
-    while(status == AOK) {
-        char *instruction = nt_strncpy(memory + cpu.ipointer, 2);
-        int32_t n_instruction = hexToDec(instruction);
-        //printf("Current Instruction: 0x%X\n", n_instruction);
-        switch(n_instruction) {
-            case 0x00: /* nop */
-                cpu.ipointer += 1 BYTE;
-            break;
-            case 0x10: /* halt */
-                halt();
-            break;
-            case 0x20: /* rrmovl */
-                mov(RR);
-            break;
-            case 0x30: /* irmovl */
-                mov(IR);
-            break;
-            case 0x40: /* rmmovl */
-                mov(RM);
-            break;
-            case 0x50: /* mrmovl */
-                mov(MR);
-            break;
-            case 0x60: /* addl */
-                op(ADD);
-            break;
-            case 0x61: /* subl */
-                op(SUB);
-            break;
-            case 0x62: /* andl */
-                op(AND);
-            break;
-            case 0x63: /* xorl */
-                op(XOR);
-            break;
-            case 0x64: /* mull */
-                op(MUL);
-            break;
-            case 0x65: /* cmpl */
-                op(CMP);
-            break;
-            case 0x70: /* jmp */
-                jXX(JMP);
-            break;
-            case 0x71: /* jle */
-                jXX(JLE);
-            break;
-            case 0x72: /* jl */
-                jXX(JL);
-            break;
-            case 0x73: /* je */
-                jXX(JE);
-            break;
-            case 0x74: /* jne */
-                jXX(JNE);
-            break;
-            case 0x75: /* jge */
-                jXX(JGE);
-            break;
-            case 0x76: /* jg */
-                jXX(JG);
-            break;
-            case 0x80: /* call */
-                call();
-            break;
-            case 0x90: /* ret */
-                ret();
-            break;
-            case 0xA0: /* pushl */
-                pushl();
-            break;
-            case 0xB0: /* popl */
-                popl();
-            break;
-            case 0xC0: /* readb */
-                read(B);
-            break;
-            case 0xC1: /* readl */
-                read(L);
-            break;
-            case 0xD0: /* writeb */
-                write(B);
-            break;
-            case 0xD1: /* writel */
-                write(L);
-            break;
-            case 0xE0: /* movsbl */
-                mov(SB);
-            break;
-            default:
-                status = INS;
-                printf("Unknown Instruction Encountered\n");
-        }
-        free(instruction);
-        /*printCPU();
-        waitFor(1);
-        clear();*/
-    }
-    return status;
 }
 
 /*
@@ -550,4 +426,115 @@ static void write(int fn) {
     int val = fn == B ? memory[src] : getLong(src);
     printf("%c", val);
     cpu.ipointer += 6 BYTE;
+}
+
+/*
+    Executes the instructions stored in memory until the status of the machine
+    is no longer AOK. There are three stop conditions:
+    HLT - This is a normal halt and is specified by the user in the machine instructions
+    ADR - An invalid address has been encountered
+    INS - An invalid Instruction has been encountered
+    Return:
+        The status of the machine when it stops.
+*/
+status_t execute() {
+    while(status == AOK) {
+        char *instruction = nt_strncpy(memory + cpu.ipointer, 2);
+        int32_t n_instruction = hexToDec(instruction);
+        //printf("Current Instruction: 0x%X\n", n_instruction);
+        switch(n_instruction) {
+            case 0x00: /* nop */
+                cpu.ipointer += 1 BYTE;
+            break;
+            case 0x10: /* halt */
+                halt();
+            break;
+            case 0x20: /* rrmovl */
+                mov(RR);
+            break;
+            case 0x30: /* irmovl */
+                mov(IR);
+            break;
+            case 0x40: /* rmmovl */
+                mov(RM);
+            break;
+            case 0x50: /* mrmovl */
+                mov(MR);
+            break;
+            case 0x60: /* addl */
+                op(ADD);
+            break;
+            case 0x61: /* subl */
+                op(SUB);
+            break;
+            case 0x62: /* andl */
+                op(AND);
+            break;
+            case 0x63: /* xorl */
+                op(XOR);
+            break;
+            case 0x64: /* mull */
+                op(MUL);
+            break;
+            case 0x65: /* cmpl */
+                op(CMP);
+            break;
+            case 0x70: /* jmp */
+                jXX(JMP);
+            break;
+            case 0x71: /* jle */
+                jXX(JLE);
+            break;
+            case 0x72: /* jl */
+                jXX(JL);
+            break;
+            case 0x73: /* je */
+                jXX(JE);
+            break;
+            case 0x74: /* jne */
+                jXX(JNE);
+            break;
+            case 0x75: /* jge */
+                jXX(JGE);
+            break;
+            case 0x76: /* jg */
+                jXX(JG);
+            break;
+            case 0x80: /* call */
+                call();
+            break;
+            case 0x90: /* ret */
+                ret();
+            break;
+            case 0xA0: /* pushl */
+                pushl();
+            break;
+            case 0xB0: /* popl */
+                popl();
+            break;
+            case 0xC0: /* readb */
+                read(B);
+            break;
+            case 0xC1: /* readl */
+                read(L);
+            break;
+            case 0xD0: /* writeb */
+                write(B);
+            break;
+            case 0xD1: /* writel */
+                write(L);
+            break;
+            case 0xE0: /* movsbl */
+                mov(SB);
+            break;
+            default:
+                status = INS;
+                printf("Unknown Instruction Encountered\n");
+        }
+        free(instruction);
+        /*printCPU();
+        waitFor(1);
+        clear();*/
+    }
+    return status;
 }
