@@ -5,8 +5,6 @@
 
 #define NUM_REGISTERS 8
 
-#define BYTE *2
-
 #define EAX 0
 #define ECX 1
 #define EDX 2
@@ -39,6 +37,14 @@
 
 #define B 0
 #define L 1
+
+typedef union byteParts_u {
+    struct {
+        unsigned int first:4;
+        unsigned int second:4;
+    } parts;
+    char c;
+} byteParts_t;
 
 typedef int32_t reg_t;
 

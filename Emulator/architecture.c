@@ -7,13 +7,12 @@
 #include "util.h"
 
 #define clear() printf("\033[H\033[J")
-#define DEBUG 1
+#define DEBUG 0
 
 static cpu_t cpu;
 static char *memory;
 static int32_t size;
 static status_t status = AOK;
-static int32_t startAddr;
 
 void waitFor (unsigned int secs) {
     unsigned int retTime = time(0) + secs;   // Get finishing time.
@@ -55,8 +54,16 @@ int bss(int32_t amt, int32_t addr) {
 */
 int insertInstructions(char *instructions, int32_t addr) {
     cpu.ipointer = addr;
-    startAddr = addr;
-    return putString(instructions, addr);
+    size_t instrLength = strlen(instructions);
+    int ok = 1;
+    int i = 0;
+    while( (i < instrLength) && ok) {
+        char *byteString = nt_strncpy(instructions + i, 2);
+        char byte = (char) hexToDec(byteString);
+        ok *= putByte(byte, addr + (i / 2));
+        i += 2;
+    }
+    return ok;
 }
 
 /*
@@ -156,7 +163,7 @@ void printMemory() {
 
 static void halt() {
     status = HLT;
-    cpu.ipointer += 1 BYTE;
+    cpu.ipointer += 1;
 }
 
 /*
@@ -174,19 +181,20 @@ static void halt() {
                 
 */
 static void mov(int fn) {
-    int32_t rA = memory[cpu.ipointer + 2] - '0';
-    int32_t rB = memory[cpu.ipointer + 3] - '0';
+    byteParts_t parts;
+    parts.c = memory[cpu.ipointer + 1];
+    int rA = parts.parts.first;
+    int rB = parts.parts.second;
     if(fn == RR) {
         /*
             Register to Register move
             Behavior: rB <- rA
         */
         cpu.registers[rB] = cpu.registers[rA];
-        cpu.ipointer += 2 BYTE;
+        cpu.ipointer += 2;
         return;
     }
-    char *valStr = nt_strncpy(memory + cpu.ipointer + 2 BYTE, 4 BYTE);
-    int32_t val = hexToDecLittleEndian(valStr);
+    int32_t val = getLong(cpu.ipointer + 2);;
     switch(fn) {
         case IR:
             /*
@@ -217,13 +225,11 @@ static void mov(int fn) {
         case SB: {
             int32_t src = cpu.registers[rB] + val;
             int8_t item = memory[src];
-            int32_t signExtended = item;
-            cpu.registers[rA] = signExtended;
+            cpu.registers[rA] = (int32_t) item;
         }
         break;
     }
-    free(valStr);
-    cpu.ipointer += 6 BYTE;
+    cpu.ipointer += 6;
 }
 
 /*
@@ -238,8 +244,10 @@ static void mov(int fn) {
         int fn - the operation to be performed
 */
 static void op(int fn) {
-    int32_t rA = memory[cpu.ipointer + 2] - '0';
-    int32_t rB = memory[cpu.ipointer + 3] - '0';
+    byteParts_t parts;
+    parts.c = memory[cpu.ipointer + 1];
+    int rA = parts.parts.first;
+    int rB = parts.parts.second;
     int32_t result = 0;
     int32_t valA = cpu.registers[rA];
     int32_t valB = cpu.registers[rB];
@@ -308,11 +316,11 @@ static void op(int fn) {
     if(fn != CMP) {
         cpu.registers[rB] = result;
     }
-    cpu.ipointer += 2 BYTE;
+    cpu.ipointer += 2;
 }
 
 static void jump(int32_t destination) {
-    cpu.ipointer = destination BYTE;
+    cpu.ipointer = destination;
 }
 
 /*
@@ -322,8 +330,7 @@ static void jump(int32_t destination) {
 */
 static void jXX(int fn) {
     int shouldJump = 0;
-    char *destString = nt_strncpy(memory + cpu.ipointer + 1 BYTE, 4 BYTE);
-    int32_t destination = hexToDecLittleEndian(destString);
+    int32_t destination = getLong(cpu.ipointer + 1);
     if(destination >= size) {
         status = ADR;
     }
@@ -349,10 +356,10 @@ static void jXX(int fn) {
     }
 
     if(shouldJump || fn == JMP) {
-        cpu.ipointer = destination BYTE;
+        cpu.ipointer = destination;
         if(DEBUG) printf("Jumping to location 0x%x\n", destination);
     } else {
-        cpu.ipointer += 5 BYTE;
+        cpu.ipointer += 5;
     }
 }
 
@@ -364,9 +371,11 @@ static void push(int32_t data) {
 }
 
 static void pushl() {
-    int32_t rA = memory[cpu.ipointer + 1 BYTE] - '0';
+    byteParts_t parts;
+    parts.c = memory[cpu.ipointer + 1];
+    int rA = parts.parts.first;
     push(cpu.registers[rA]);
-    cpu.ipointer += 2 BYTE;
+    cpu.ipointer += 2;
 }
 
 int32_t pop() {
@@ -377,32 +386,33 @@ int32_t pop() {
 }
 
 static void popl() {
-    int32_t rA = memory[cpu.ipointer + 1 BYTE] - '0';
+    byteParts_t parts;
+    parts.c = memory[cpu.ipointer + 1];
+    int rA = parts.parts.first;
     cpu.registers[rA] = pop();
-    cpu.ipointer += 2 BYTE;
+    cpu.ipointer += 2;
 }
 
 static void call() {
-    char *destinationStr = nt_strncpy(memory + cpu.ipointer + 1 BYTE, 4 BYTE);
-    int32_t destination = hexToDecLittleEndian(destinationStr);
-    if(DEBUG) printf("Calling memory at location %d\n", destination BYTE);
-    free(destinationStr);
-    push(cpu.ipointer + 5 BYTE); /* Push return address onto stack */
+    int32_t destination = getLong(cpu.ipointer + 1);
+    if(DEBUG) printf("Calling memory at location %d\n", destination);
+    push(cpu.ipointer + 5); /* Push return address onto stack */
     jump(destination);
-    //cpu.ipointer += 5 BYTE;
+    //cpu.ipointer += 5;
 }
 
 static void ret() {
     int32_t returnAddr = pop();
     if(DEBUG) printf("Returning to address %d\n", returnAddr);
     jump(returnAddr);
-    //cpu.ipointer += 1 BYTE;
+    //cpu.ipointer += 1;
 }
 
 static void read(int fn) {
-    int32_t rA = memory[cpu.ipointer + 2] - '0';
-    char *displacementStr = nt_strncpy(memory + cpu.ipointer + 2 BYTE, 4 BYTE);
-    int32_t displacement = hexToDecLittleEndian(displacementStr);
+    byteParts_t parts;
+    parts.c = memory[cpu.ipointer + 1];
+    int rA = parts.parts.first;
+    int32_t displacement = getLong(cpu.ipointer + 2);
     int32_t dst = cpu.registers[rA] + displacement;
     int in = 0;
     char *str = (fn == B ? "%c" : "%d");
@@ -419,20 +429,21 @@ static void read(int fn) {
         status = ADR;
     }
     
-    cpu.ipointer += 6 BYTE;
+    cpu.ipointer += 6;
 }
 
 static void write(int fn) {
-    int32_t rA = memory[cpu.ipointer + 2] - '0';
-    char *displacementStr = nt_strncpy(memory + cpu.ipointer + 2 BYTE, 4 BYTE);
-    int32_t displacement = hexToDecLittleEndian(displacementStr);
+    byteParts_t parts;
+    parts.c = memory[cpu.ipointer + 1];
+    int rA = parts.parts.first;
+    int32_t displacement = getLong(cpu.ipointer + 2);
     int32_t src = cpu.registers[rA] + displacement;
     if(src >= size) {
         status = ADR;
     }
     int val = fn == B ? memory[src] : getLong(src);
     printf("%c", val);
-    cpu.ipointer += 6 BYTE;
+    cpu.ipointer += 6;
 }
 
 /*
@@ -446,13 +457,12 @@ static void write(int fn) {
 */
 status_t execute() {
     while(status == AOK) {
-        char *instruction = nt_strncpy(memory + cpu.ipointer, 2);
-        int32_t n_instruction = hexToDec(instruction);
+        unsigned char instruction = (unsigned char)memory[cpu.ipointer];
         if(DEBUG) printf("ipointer: 0x%x\n", cpu.ipointer);
-        switch(n_instruction) {
+        switch(instruction) {
             case 0x00: /* nop */
                 if(DEBUG) printf("0x00 nop\n");
-                cpu.ipointer += 1 BYTE;
+                cpu.ipointer += 1;
             break;
             case 0x10: /* halt */
                 if(DEBUG) printf("0x10 halt\n");
@@ -566,7 +576,6 @@ status_t execute() {
                 status = INS;
                 printf("Unknown Instruction Encountered\n");
         }
-        free(instruction);
         if(DEBUG) {
             //printCPU();
             waitFor(2);
