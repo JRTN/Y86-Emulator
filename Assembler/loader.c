@@ -5,7 +5,6 @@
 #include <stdlib.h>
 
 #include "loader.h"
-#include "tokenizer.h"
 #include "util.h"
 
 static char **tokenizeProgram(char*);
@@ -35,6 +34,8 @@ char **getInstructions(char *fileName) {
     return programTokens;
 }
 
+#define DELIMITERS " $(),%\n\t\v\f"
+
 /*
     Splits a string containing the program at white spaces and stores the tokens
     in an array of c strings. Freeing the memory of the result is left to the
@@ -51,11 +52,11 @@ static char **tokenizeProgram(char *program) {
     }
     char **program_tokens = NULL;
     size_t numTokens = 0;
-    TokenizerT *tk = TKCreate(program);
     numTokens = 0;
 
     char *token = NULL;
-    while( (token = TKGetNextToken(tk)) ) {
+    token = strtok(program, DELIMITERS);
+    while( token ) {
         program_tokens = realloc(program_tokens, sizeof(char*) * ++numTokens);
 
         if(!program_tokens) {
@@ -64,11 +65,11 @@ static char **tokenizeProgram(char *program) {
         }
 
         program_tokens[numTokens - 1] = token;
+        token = strtok(NULL, DELIMITERS);
     }
 
     program_tokens = realloc(program_tokens, sizeof(char*) * (numTokens + 1));
     program_tokens[numTokens] =  NULL;
-    TKDestroy(tk);
     return program_tokens;
 }
 
