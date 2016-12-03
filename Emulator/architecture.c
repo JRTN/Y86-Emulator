@@ -8,16 +8,26 @@
 
 #define clear() printf("\033[H\033[J")
 #define DEBUG 0
-#define CALL 1
+#define CALL 0
+#define INSTR 0
 
 static cpu_t cpu;
 static char *memory;
 static int32_t size;
 static status_t status = AOK;
 
+static char *registers[8] = {"eax", "ecx", "edx", "ebx", "esp", "ebp", "esi", "edi"};
+
 void waitFor (unsigned int secs) {
     unsigned int retTime = time(0) + secs;   // Get finishing time.
     while (time(0) < retTime);               // Loop until it arrives.
+}
+
+static void checkbound(int32_t addr) {
+    if(addr >= size) {
+        printf("Attemped to access out of bound address 0x%x\n", addr);
+        status = ADR;
+    }
 }
 
 /*
@@ -30,7 +40,6 @@ void waitFor (unsigned int secs) {
 int initialize(int32_t amt) {
     size = amt;
     memory = malloc(amt);
-    if(DEBUG) printf("Allocated %d bytes of memory for address space\n", amt);
     return memory != NULL;
 }
 
@@ -96,10 +105,7 @@ int putString(char *str, int32_t addr) {
         is out of range.
 */
 int putLong(int32_t num, int32_t addr) {
-    if(addr + 4 >= size) {
-        return 0;
-    }
-
+    checkbound(addr);
     int32_t * loc = (int32_t*)(&memory[addr]);
     *loc = num;
 
@@ -116,9 +122,7 @@ int putLong(int32_t num, int32_t addr) {
         are no issues; 0 otherwise (which can also be a valid return)
 */
 int32_t getLong(int32_t addr) {
-    if(addr + 4 >= size) {
-        return 0;
-    }
+    checkbound(addr);
     int32_t *loc = (int32_t*)(&memory[addr]);
     return *loc;
 }
@@ -143,12 +147,12 @@ int putByte(char byte, int32_t addr) {
 void printCPU() {
     int i;
     for(i = 0; i < NUM_REGISTERS; i++) {
-        printf("%d: %12d\n", i, cpu.registers[i]);
+        printf("%s: %12d\n", registers[i], cpu.registers[i]);
     }
-    printf("IP: %11d\n", cpu.ipointer);
-    printf("OF: %11d\n", cpu.OF);
-    printf("SF: %11d\n", cpu.SF);
-    printf("ZF: %11d\n", cpu.ZF);
+    printf(" IP: %12d\n", cpu.ipointer);
+    printf(" OF: %12d\n", cpu.OF);
+    printf(" SF: %12d\n", cpu.SF);
+    printf(" ZF: %12d\n", cpu.ZF);
 }
 
 void printMemory() {
@@ -159,13 +163,6 @@ void printMemory() {
         } else {
             printf("-");
         }
-    }
-}
-
-static void checkbound(int32_t addr) {
-    if(addr >= size) {
-        printf("Attemped to access out of bound address 0x%x\n", addr);
-        status = ADR;
     }
 }
 
@@ -193,7 +190,6 @@ static void mov(int fn) {
     parts.c = memory[cpu.ipointer + 1];
     int rA = parts.parts.second;
     int rB = parts.parts.first;
-    if(DEBUG) printf("rA:%d rB:%d\n", rA, rB);
     if(fn == RR) {
         /*
             Register to Register move
@@ -218,7 +214,7 @@ static void mov(int fn) {
                 Behavior: val(rB) <- rA
             */
             int32_t dst = cpu.registers[rB] + val;
-            putLong(val, dst);
+            putLong(cpu.registers[rA], dst);
         }
         break;
         case MR: {
@@ -227,16 +223,16 @@ static void mov(int fn) {
                 rA <- val(rB)
             */
             int32_t src = cpu.registers[rB] + val;
-            int32_t res = memory[src];
+            int32_t res = getLong(src);
             cpu.registers[rA] = res;
         }
         break;
         case SB: {
             int32_t src = cpu.registers[rB] + val;
+            checkbound(src);
             int8_t item = memory[src];
             int32_t extended = (int32_t) item;
-            if(DEBUG) printf("Sign extended 0x%x to 0x%x\n", item, extended);
-            cpu.registers[rA] = item;
+            cpu.registers[rA] = extended;
         }
         break;
     }
@@ -277,7 +273,6 @@ static void op(int fn) {
         case SUB:
         case CMP:
             result = valB - valA;
-            if(DEBUG) printf("[rB]%d - [rA]%d = [result]%d\n", valB, valA, result);
             /*
                 Overflow if:
                     valB is negative, valA is positive, and result is positive
@@ -288,7 +283,7 @@ static void op(int fn) {
                      (valB > 0 && valA < 0 && result < 0);
         break;
         case AND:
-            result = valB && valA;
+            result = valB & valA;
             /*
                 There can't be overflow from 'and' operations.
             */
@@ -363,7 +358,6 @@ static void jXX(int fn) {
 
     if(shouldJump || fn == JMP) {
         cpu.ipointer = destination;
-        if(DEBUG) printf("Jumping to location 0x%x\n", destination);
     } else {
         cpu.ipointer += 5;
     }
@@ -371,9 +365,9 @@ static void jXX(int fn) {
 
 static void push(int32_t data) {
     cpu.registers[ESP] -= 4;
-    if(DEBUG) printf("Pushing value 0x%x onto the stack\n", data);
-    if(DEBUG) printf("ESP: %d\n", cpu.registers[ESP]);
+    if(DEBUG) printf("Pushing value %d onto the stack\n", data);
     putLong(data, cpu.registers[ESP]);
+    if(DEBUG) printf("ESP: %d Memory[ESP] = %d\n", cpu.registers[ESP], getLong(cpu.registers[ESP]));
 }
 
 static void pushl() {
@@ -386,7 +380,7 @@ static void pushl() {
 
 int32_t pop() {
     int32_t res = getLong(cpu.registers[ESP]);
-    if(DEBUG) printf("Popping value 0x%x from the stack\n", res);
+    if(DEBUG) printf("Popping value %d from the stack\n", res);
     cpu.registers[ESP] += 4;
     return res;
 }
@@ -409,7 +403,7 @@ static void call() {
 
 static void ret() {
     int32_t returnAddr = pop();
-    if(DEBUG || CALL) printf("Returning to address 0x%x\n", returnAddr);
+    if(DEBUG) printf("Returning to address 0x%x\n", returnAddr);
     cpu.ipointer = returnAddr;
 }
 
@@ -426,16 +420,13 @@ static void read(int fn) {
         char c = 0;
         set = scanf("%c", &c);
         result = putByte(c, dst);
-        if(DEBUG) printf("Put Byte 0x%x at location %d\n", c, dst);
     } else {
         int32_t l = 0;
-        set = scanf("%d", &l);
+        set = scanf("%i", &l);
         result = putLong(l, dst);
-        if(DEBUG) printf("Put Long 0x%x at location %d\n", l, dst);
     }
 
     cpu.ZF = set == EOF;
-    if(DEBUG) printf("ZF set to %d\n", cpu.ZF);
 
     if(!result) {
         status = ADR;
@@ -468,118 +459,118 @@ static void write(int fn) {
 status_t execute() {
     while(status == AOK) {
         unsigned char instruction = (unsigned char)memory[cpu.ipointer];
-        if(DEBUG || CALL) printf("ipointer: 0x%x\n", cpu.ipointer);
+        //if(DEBUG || CALL) printf("ipointer: 0x%x\n", cpu.ipointer);
         switch(instruction) {
             case 0x00: /* nop */
-                if(DEBUG) printf("0x00 nop\n");
+                if(INSTR) printf("0x00 nop\n");
                 cpu.ipointer += 1;
             break;
             case 0x10: /* halt */
-                if(DEBUG) printf("0x10 halt\n");
+                if(INSTR) printf("0x10 halt\n");
                 halt();
             break;
             case 0x20: /* rrmovl */
-                if(DEBUG) printf("0x20 rrmovl\n");
+                if(INSTR) printf("0x20 rrmovl\n");
                 mov(RR);
             break;
             case 0x30: /* irmovl */
-                if(DEBUG) printf("0x30 irmovl\n");
+                if(INSTR) printf("0x30 irmovl\n");
                 mov(IR);
             break;
             case 0x40: /* rmmovl */
-                if(DEBUG) printf("0x40 rmmovl\n");
+                if(INSTR) printf("0x40 rmmovl\n");
                 mov(RM);
             break;
             case 0x50: /* mrmovl */
-                if(DEBUG) printf("0x50 mrmovl\n");
+                if(INSTR) printf("0x50 mrmovl\n");
                 mov(MR);
             break;
             case 0x60: /* addl */
-                if(DEBUG) printf("0x60 addl\n");
+                if(INSTR) printf("0x60 addl\n");
                 op(ADD);
             break;
             case 0x61: /* subl */
-                if(DEBUG) printf("0x61 subl\n");
+                if(INSTR) printf("0x61 subl\n");
                 op(SUB);
             break;
             case 0x62: /* andl */
-                if(DEBUG) printf("0x62 andl\n");
+                if(INSTR) printf("0x62 andl\n");
                 op(AND);
             break;
             case 0x63: /* xorl */
-                if(DEBUG) printf("0x63 xorl\n");
+                if(INSTR) printf("0x63 xorl\n");
                 op(XOR);
             break;
             case 0x64: /* mull */
-                if(DEBUG) printf("0x64 mull\n");
+                if(INSTR) printf("0x64 mull\n");
                 op(MUL);
             break;
             case 0x65: /* cmpl */
-                if(DEBUG) printf("0x65 cmpl\n");
+                if(INSTR) printf("0x65 cmpl\n");
                 op(CMP);
             break;
             case 0x70: /* jmp */
-                if(DEBUG) printf("0x70 jmp\n");
+                if(INSTR) printf("0x70 jmp\n");
                 jXX(JMP);
             break;
             case 0x71: /* jle */
-                if(DEBUG) printf("0x71 jle\n");
+                if(INSTR) printf("0x71 jle\n");
                 jXX(JLE);
             break;
             case 0x72: /* jl */
-                if(DEBUG) printf("0x72 jl\n");
+                if(INSTR) printf("0x72 jl\n");
                 jXX(JL);
             break;
             case 0x73: /* je */
-                if(DEBUG) printf("0x73 je\n");
+                if(INSTR) printf("0x73 je\n");
                 jXX(JE);
             break;
             case 0x74: /* jne */
-                if(DEBUG) printf("0x74 jne\n");
+                if(INSTR) printf("0x74 jne\n");
                 jXX(JNE);
             break;
             case 0x75: /* jge */
-                if(DEBUG) printf("0x75 jge\n");
+                if(INSTR) printf("0x75 jge\n");
                 jXX(JGE);
             break;
             case 0x76: /* jg */
-                if(DEBUG) printf("0x76 jg\n");
+                if(INSTR) printf("0x76 jg\n");
                 jXX(JG);
             break;
             case 0x80: /* call */
-                if(DEBUG) printf("0x80 call\n");
+                if(INSTR) printf("0x80 call\n");
                 call();
             break;
             case 0x90: /* ret */
-                if(DEBUG) printf("0x90 ret\n");
+                if(INSTR) printf("0x90 ret\n");
                 ret();
             break;
             case 0xA0: /* pushl */
-                if(DEBUG) printf("0xA0 pushl\n");
+                if(INSTR) printf("0xA0 pushl\n");
                 pushl();
             break;
             case 0xB0: /* popl */
-                if(DEBUG) printf("0xB0 popl\n");
+                if(INSTR) printf("0xB0 popl\n");
                 popl();
             break;
             case 0xC0: /* readb */
-                if(DEBUG) printf("0xC0 readb\n");
+                if(INSTR) printf("0xC0 readb\n");
                 read(B);
             break;
             case 0xC1: /* readl */
-                if(DEBUG) printf("0xC1 readl\n");
+                if(INSTR) printf("0xC1 readl\n");
                 read(L);
             break;
             case 0xD0: /* writeb */
-                if(DEBUG) printf("0xD0 writeb\n");
+                if(INSTR) printf("0xD0 writeb\n");
                 write(B);
             break;
             case 0xD1: /* writel */
-                if(DEBUG) printf("0xD1 writel\n");
+                if(INSTR) printf("0xD1 writel\n");
                 write(L);
             break;
             case 0xE0: /* movsbl */
-                if(DEBUG) printf("0xE0 movsbl\n");
+                if(INSTR) printf("0xE0 movsbl\n");
                 mov(SB);
             break;
             default:
@@ -587,9 +578,9 @@ status_t execute() {
                 printf("Unknown Instruction Encountered\n");
         }
         if(DEBUG) {
-            //printCPU();
-            //waitFor(1);
-            //clear();
+            /*printCPU();
+            waitFor(1);
+            clear();*/
         }
         
     }
