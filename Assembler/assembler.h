@@ -1,6 +1,24 @@
 #ifndef assembler_h
 #define assembler_h
 
+#define EAX "eax"
+#define ECX "ecx"
+#define EDX "edx"
+#define EBX "ebx"
+#define ESP "esp"
+#define EBP "ebp"
+#define ESI "esi"
+#define EDI "edi"
+
+#define EAX_C 0
+#define ECX_C 1
+#define EDX_C 2
+#define EBX_C 3
+#define ESP_C 4
+#define EBP_C 5
+#define ESI_C 6
+#define EDI_C 7
+
 #define NOP "nop"
 #define HALT "halt"
 #define RRMOVL "rrmovl"

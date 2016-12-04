@@ -8,14 +8,49 @@
 #define STREQ(x,y) strcmp(x,y)==0
 #define DELIMITERS " $(),%\n\t\v\f"
 
+static int getRegisters(char *reg) {
+    if(!reg1) {
+        return -1;
+    } else if(STREQ(reg1, EAX)) {
+        return EAX_C;
+    } else if(STREQ(reg1, ECX)) {
+        return ECX_C;
+    } else if(STREQ(reg1, EDX)) {
+        return EDX_C;
+    } else if(STREQ(reg1, EBX)) {
+        return EBX_C;
+    } else if(STREQ(reg1, ESP)) {
+        return ESP_C;
+    } else if(STREQ(reg1, EBP)) {
+        return EBP_C;
+    } else if(STREQ(reg1, ESI)) {
+        return ESI_C;
+    } else if(STREQ(reg1, EDI)) {
+        return EDI_C;
+    } else {
+        return -1;
+    }
+}
+
+static void op(const char *fn_c) {
+    char rA;
+    char rB;
+    
+    char *reg1 = strtok(NULL, DELIMITERS);
+    
+
+
+    printf("%s%c%c", fn_c, rA, rB);
+}
+
 void assemble(char *program) {
     char *token = NULL;
     token = strtok(program, DELIMITERS);
     while( token ) {
         if(STREQ(token, NOP)) {
-            printf("nop\n");
+            printf(NOP_C);
         } else if(STREQ(token, HALT)) {
-            printf("halt\n");
+            printf(HALT_C);
         } else if(STREQ(token, RRMOVL)) {
             printf("rrmovl\n");
         } else if(STREQ(token, IRMOVL)) {
