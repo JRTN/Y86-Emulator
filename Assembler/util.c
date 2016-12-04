@@ -64,3 +64,4 @@ char *nt_strncpy(const char *src, size_t n) {
     }
     return result;
 }
+
