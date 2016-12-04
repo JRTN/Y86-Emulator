@@ -5,7 +5,8 @@
 #include "loader.h"
 
 int main(int argc, char **argv) {
-    char **programTokens = getInstructions(argv[1]);
-    assemble(programTokens);
-    free(programTokens);
+    char *programString = getInstructions(argv[1]);
+    assemble(programString);
+
+    return 0;
 }

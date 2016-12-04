@@ -7,7 +7,6 @@
 #include "loader.h"
 #include "util.h"
 
-static char **tokenizeProgram(char*);
 static char *getFileContents(char*);
 
 /*
@@ -23,54 +22,14 @@ static char *getFileContents(char*);
         1 if the file was successfully opened and its contents loaded into memory;
         0 if there were any issues.
 */
-char **getInstructions(char *fileName) {
+char *getInstructions(char *fileName) {
     char *programString = getFileContents(fileName);
     if(!programString) {
         fprintf(stderr, "ERROR: Failed to open file %s, perhaps it does not exist?\n", fileName);
         return NULL;
     }
-    char **programTokens = tokenizeProgram(programString);
-    free(programString);
-    return programTokens;
-}
 
-#define DELIMITERS " $(),%\n\t\v\f"
-
-/*
-    Splits a string containing the program at white spaces and stores the tokens
-    in an array of c strings. Freeing the memory of the result is left to the
-    caller.
-    Arguments:
-        char *program - The text making up the contents of the program
-    Return:
-        An array of c strings containing the tokenized program if no issues
-        are encountered; NULL otherwise.
-*/
-static char **tokenizeProgram(char *program) {
-    if(!program) {
-        return NULL;    
-    }
-    char **program_tokens = NULL;
-    size_t numTokens = 0;
-    numTokens = 0;
-
-    char *token = NULL;
-    token = strtok(program, DELIMITERS);
-    while( token ) {
-        program_tokens = realloc(program_tokens, sizeof(char*) * ++numTokens);
-
-        if(!program_tokens) {
-            fprintf(stderr, "\nMemory allocation failed\n");
-            return NULL;
-        }
-
-        program_tokens[numTokens - 1] = token;
-        token = strtok(NULL, DELIMITERS);
-    }
-
-    program_tokens = realloc(program_tokens, sizeof(char*) * (numTokens + 1));
-    program_tokens[numTokens] =  NULL;
-    return program_tokens;
+    return programString;
 }
 
 /*

@@ -1,10 +1,16 @@
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 #include "util.h"
 
-void assemble(char **programTokens) {
-    int i = 0;
-    while(programTokens[i]) {
-        printf("%s\n", programTokens[i++]);
+#define DELIMITERS " $(),%\n\t\v\f"
+
+void assemble(char *program) {
+    char *token = NULL;
+    token = strtok(program, DELIMITERS);
+    while( token ) {
+        printf("%s\n", token);
+        token = strtok(NULL, DELIMITERS);
     }
 }
