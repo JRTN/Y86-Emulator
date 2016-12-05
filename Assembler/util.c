@@ -4,6 +4,26 @@
 #include <stdlib.h>
 #include "util.h"
 
+union Number_t {
+    struct {
+        unsigned int one : 8;
+        unsigned int two : 8;
+        unsigned int three : 8;
+        unsigned int four : 8;
+    } bytes;
+    int32_t num;
+};
+/*
+    Somewhat hacky solution to printing a negative number in little endian hexadecimal
+    representation. It probably works with positive numbers, but I already have a solution
+    for that and don't want to mess with it.
+*/
+void printInt32LittleEndian(int32_t val) {
+    union Number_t u;
+    u.num = val;
+    printf("%02x%02x%02x%02x", u.bytes.one, u.bytes.two, u.bytes.three, u.bytes.four);
+}
+
 /*
     Simple linear search that searches an array of strings for the 
     given target and returns the position of the first encounter.
@@ -37,13 +57,6 @@ int searchStringArray(char **arr, char *target) {
 int32_t hexToDec(char *hex) {
     int32_t result;
     sscanf(hex, "%x", &result);
-    return result;
-}
-
-int32_t hexToDecLittleEndian(char *hex) {
-    int32_t result = 0;
-    result = hexToDec(hex);
-    result = ( (result & 0xff) << 24 ) | ( (result & 0xff00) << 8 ) | ( (result & 0xff0000) >> 8 ) | ( (result >> 24) & 0xff ); /* Trust me */
     return result;
 }
 
