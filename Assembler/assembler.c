@@ -5,42 +5,75 @@
 #include "util.h"
 #include "assembler.h"
 
-#define STREQ(x,y) strcmp(x,y)==0
 #define DELIMITERS " $(),%\n\t\v\f"
 
-static int getRegisters(char *reg) {
-    if(!reg1) {
+static int getRegisterCode(char *reg) {
+    if(!reg) {
         return -1;
-    } else if(STREQ(reg1, EAX)) {
+    } else if(STREQ(reg, EAX)) {
         return EAX_C;
-    } else if(STREQ(reg1, ECX)) {
+    } else if(STREQ(reg, ECX)) {
         return ECX_C;
-    } else if(STREQ(reg1, EDX)) {
+    } else if(STREQ(reg, EDX)) {
         return EDX_C;
-    } else if(STREQ(reg1, EBX)) {
+    } else if(STREQ(reg, EBX)) {
         return EBX_C;
-    } else if(STREQ(reg1, ESP)) {
+    } else if(STREQ(reg, ESP)) {
         return ESP_C;
-    } else if(STREQ(reg1, EBP)) {
+    } else if(STREQ(reg, EBP)) {
         return EBP_C;
-    } else if(STREQ(reg1, ESI)) {
+    } else if(STREQ(reg, ESI)) {
         return ESI_C;
-    } else if(STREQ(reg1, EDI)) {
+    } else if(STREQ(reg, EDI)) {
         return EDI_C;
     } else {
         return -1;
     }
 }
 
+static void jump(const char *fn_c) {
+    char *destToken = strtok(NULL, DELIMITERS);
+    if(!destToken) {
+        fprintf(stderr, "ERROR: Instruction %s expected 8 character hex address\n", fn_c);
+    }
+    //LOWERCASESTR(destToken);
+    int32_t destValue;
+    sscanf(destToken, "%x", &destValue);
+    
+    printf("%s%08x", fn_c, ENDIANSWAP(destValue));
+}
+
 static void op(const char *fn_c) {
-    char rA;
-    char rB;
-    
     char *reg1 = strtok(NULL, DELIMITERS);
-    
+    char *reg2 = strtok(NULL, DELIMITERS);
 
+    int rA = getRegisterCode(reg1);
+    int rB = getRegisterCode(reg2);
 
-    printf("%s%c%c", fn_c, rA, rB);
+    if(rA == -1 || rB == -1) {
+        fprintf(stderr, "ERROR: Invalid arguments to op %s, expected two registers\n", fn_c);
+        return;
+    }
+
+    printf("%s%c%c", fn_c, rA + '0', rB + '0');
+}
+
+static void stackInstr(const char *fn_c) {
+    char *reg1 = strtok(NULL, DELIMITERS);
+    int rA = getRegisterCode(reg1);
+    if(rA == -1) {
+        fprintf(stderr, "ERROR: Invalid arguments to op %s, expected one register\n", fn_c);
+    }
+    printf("%s%cf", fn_c, rA + '0');
+}
+
+static void read(const char *fn_c) {
+    char *displacementStr = strtok(NULL, DELIMITERS);
+    int32_t displacement;
+    sscanf(displacementStr, "%d", &displacement);
+    char *reg1 = strtok(NULL, DELIMITERS);
+    int rA = getRegisterCode(reg1);
+    printf("%s%cf%08x", fn_c, rA + '0', ENDIANSWAP(displacement));
 }
 
 void assemble(char *program) {
@@ -60,43 +93,43 @@ void assemble(char *program) {
         } else if(STREQ(token, MRMOVL)) {
             printf("mrmovl\n");
         } else if(STREQ(token, ADDL)) {
-            printf("addl\n");
+            op(ADDL_C);
         } else if(STREQ(token, SUBL)) {
-            printf("subl\n");
+            op(SUBL_C);
         } else if(STREQ(token, ANDL)) {
-            printf("andl\n");
+            op(ANDL_C);
         } else if(STREQ(token, XORL)) {
-            printf("xorl\n");
+            op(XORL_C);
         } else if(STREQ(token, MULL)) {
-            printf("mull\n");
+            op(MULL_C);
         } else if(STREQ(token, CMPL)) {
-            printf("cmpl\n");
+            op(CMPL_C);
         } else if(STREQ(token, JMP)) {
-            printf("jmp\n");
+            jump(JMP_C);
         } else if(STREQ(token, JLE)) {
-            printf("jle\n");
+            jump(JLE_C);
         } else if(STREQ(token, JL)) {
-            printf("jl\n");
+            jump(JL_C);
         } else if(STREQ(token, JE)) {
-            printf("je\n");
+            jump(JE_C);
         } else if(STREQ(token, JNE)) {
-            printf("jne\n");
+            jump(JNE_C);
         } else if(STREQ(token, JGE)) {
-            printf("jge\n");
+            jump(JGE_C);
         } else if(STREQ(token, JG)) {
-            printf("jg\n");
+            jump(JG_C);
         } else if(STREQ(token, CALL)) {
-            printf("call\n");
+            jump(CALL_C);
         } else if(STREQ(token, RET)) {
-            printf("ret\n");
+            printf(RET_C);
         } else if(STREQ(token, PUSHL)) {
-            printf("pushl\n");
+            stackInstr(PUSHL_C);
         } else if(STREQ(token, POPL)) {
-            printf("popl\n");
+            stackInstr(POPL_C);
         } else if(STREQ(token, READB)) {
-            printf("readb\n");
+            read(READB_C);
         } else if(STREQ(token, READL)) {
-            printf("readl\n");
+            read(READL_C);
         } else if(STREQ(token, WRITEB)) {
             printf("writeb\n");
         } else if(STREQ(token, WRITEL)) {
