@@ -51,7 +51,7 @@ static char * getFileContents(char *fileName) {
         fseek (f, 0, SEEK_SET);
         buffer = malloc (length + 1);
         if(!buffer) {
-            fprintf(stderr, "Memory allocation failed\n");
+            fprintf(stderr, "ERROR: Memory allocation failed\n");
             return NULL;
         }
 

@@ -239,7 +239,7 @@ static void translate() {
                 mov(SB);
             break;
             default:
-                printf("Unknown Instruction Encountered %s[0x%X]\n", instruction, n_instruction);
+                fprintf(stderr, "ERROR: Unknown Instruction Encountered %s[0x%X]\n", instruction, n_instruction);
         }
         free(instruction);        
     }

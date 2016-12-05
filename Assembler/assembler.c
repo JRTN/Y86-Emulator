@@ -7,6 +7,15 @@
 
 #define DELIMITERS " $(),%\n\t\v\f"
 
+/*
+    Returns the integer corresponding to the string register indicated
+    by the string.
+    Arguments: 
+        char *reg - the string representation of the register
+    Return:
+        the number corresponding to the register if reg is a valid register;
+        -1 otherwise.
+*/
 static int getRegisterCode(char *reg) {
     if(!reg) {
         return -1;
@@ -31,23 +40,42 @@ static int getRegisterCode(char *reg) {
     }
 }
 
+/*
+    Prints a standard error message and exits the program.
+    Arguments:
+        const char *fn_c - the string containing the code corresponding to the
+        instruction with which there is a problem
+        const char *message - the error message to be printed
+*/
 static void invalidArguments(const char *fn_c, const char *message) {
     fprintf(stderr, "ERROR: Instruction <%s> | %s\nProgram is exiting.\n", fn_c, message);
     exit(EXIT_FAILURE);
 }
 
+/*
+    Handles assembling the jump and call instructions into ascii form
+    Arguments:
+        const char *fn_c - the code corresponding to the y86 instruction
+*/
 static void jump(const char *fn_c) {
     char *destToken = strtok(NULL, DELIMITERS);
     if(!destToken) {
         invalidArguments(fn_c, "expected 8 character hex address\n");
     }
     int32_t destValue;
-    sscanf(destToken, "%x", &destValue);
-    
+    int scan = sscanf(destToken, "%x", &destValue);
+    if(scan == EOF) {
+        invalidArguments(fn_c, "could not parse destination address\n");
+    }
     printf("%s", fn_c);
     printInt32LittleEndian(destValue);
 }
 
+/*
+    Handles assembling the operation and rrmov instructions into ascii form
+    Arguments:
+        const char *fn_c - the code corresponding to the y86 instruction
+*/
 static void op(const char *fn_c) {
     char *reg1 = strtok(NULL, DELIMITERS);
     char *reg2 = strtok(NULL, DELIMITERS);
@@ -63,6 +91,11 @@ static void op(const char *fn_c) {
     printf("%s%c%c", fn_c, rA + '0', rB + '0');
 }
 
+/*
+    Handles assembling the push and pop instructions.
+    Arguments:
+        const char *fn_c - the code corresponding to the y86 instruction
+*/
 static void stackInstr(const char *fn_c) {
     char *reg1 = strtok(NULL, DELIMITERS);
     int rA = getRegisterCode(reg1);
@@ -72,13 +105,21 @@ static void stackInstr(const char *fn_c) {
     printf("%s%cf", fn_c, rA + '0');
 }
 
+/*
+    Handles assembling the read and write instructions.
+    Arguments:
+        const char *fn_c - the code corresponding to the y86 instruction
+*/
 static void readWrite(const char *fn_c) {
     char *displacementStr = strtok(NULL, DELIMITERS);
     if(!displacementStr) {
         invalidArguments(fn_c, "expected decimal displacement\n");        
     }
     int32_t displacement;
-    sscanf(displacementStr, "%d", &displacement);
+    int scan = sscanf(displacementStr, "%d", &displacement);
+    if(scan == EOF) {
+        invalidArguments(fn_c, "could not parse displacement amount\n");
+    }
     char *reg1 = strtok(NULL, DELIMITERS);
     int rA = getRegisterCode(reg1);
     if(rA == -1) {
@@ -88,13 +129,21 @@ static void readWrite(const char *fn_c) {
     printInt32LittleEndian(displacement);
 }
 
+/*
+    Handles assembling the movsbl and mrmovl instructions
+    Arguments:
+        const char *fn_c - the code corresponding to the y86 instruction
+*/
 static void sblmr(const char *fn_c) {
     char *displacementStr = strtok(NULL, DELIMITERS);
     if(!displacementStr) {
         invalidArguments(fn_c, "expected decimal displacement\n");        
     }
     int32_t displacement;
-    sscanf(displacementStr, "%d", &displacement);
+    int scan = sscanf(displacementStr, "%d", &displacement);
+    if(scan == EOF) {
+        invalidArguments(fn_c, "could not parse displacement amount\n");
+    }
     char *reg2 = strtok(NULL, DELIMITERS);
     char *reg1 = strtok(NULL, DELIMITERS);
     int rB = getRegisterCode(reg2);
@@ -109,13 +158,19 @@ static void sblmr(const char *fn_c) {
     
 }
 
+/*
+    Handles assembling the irmovl instruction
+*/
 static void irmovl() {
     char *immediateStr = strtok(NULL, DELIMITERS);
     if(!immediateStr) {
         invalidArguments(IRMOVL_C, "expected decimal immediate value\n");
     }
     int32_t immediate;
-    sscanf(immediateStr, "%d", &immediate);
+    int scan = sscanf(immediateStr, "%d", &immediate);
+    if(scan == EOF) {
+        invalidArguments(IRMOVL_C, "could not parse immediate value\n");
+    }
     char *reg1 = strtok(NULL, DELIMITERS);
     int rA = getRegisterCode(reg1);
     if(rA == -1) {
@@ -127,6 +182,9 @@ static void irmovl() {
     
 }
 
+/*
+    Handles assembling the rmmovl instruction
+*/
 static void rmmovl() {
     char *reg1 = strtok(NULL, DELIMITERS);
     int rA = getRegisterCode(reg1);
@@ -135,7 +193,10 @@ static void rmmovl() {
         invalidArguments(RMMOVL_C, "expected decimal displacement value\n");
     }
     int32_t displacement;
-    sscanf(displacementStr, "%d", &displacement);
+    int scan = sscanf(displacementStr, "%d", &displacement);
+    if(scan == EOF) {
+        invalidArguments(RMMOVL_C, "could not parse displacement amount\n");
+    }
     char *reg2 = strtok(NULL, DELIMITERS);
     int rB = getRegisterCode(reg2);
     if(rA == -1 || rB == -1) {
@@ -146,6 +207,10 @@ static void rmmovl() {
     
 }
 
+/*
+    Main loop of the assembler. Loops through every instruction in the program
+    and calls the appropriate helper functions. These 
+*/
 void assemble(char *program) {
     char *token = NULL;
     token = strtok(program, DELIMITERS);

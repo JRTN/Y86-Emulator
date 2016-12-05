@@ -35,7 +35,6 @@ int loadFileIntoMemory(char *fileName) {
         return 0;
     }
     char **programTokens = tokenizeProgram(programString);
-    free(programString);
     int initialized = initializeArchitecture(programTokens);
     if(initialized) {
         int instructionsSet = setInstructions(programTokens);
@@ -43,6 +42,7 @@ int loadFileIntoMemory(char *fileName) {
         return instructionsSet && directivesRun;
     }
     free(programTokens);
+    free(programString);
     return 0;
 }
 
