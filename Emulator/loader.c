@@ -39,6 +39,8 @@ int loadFileIntoMemory(char *fileName) {
     if(initialized) {
         int instructionsSet = setInstructions(programTokens);
         int directivesRun = runDirectives(programTokens);
+        free(programTokens);
+        free(programString);
         return instructionsSet && directivesRun;
     }
     free(programTokens);
