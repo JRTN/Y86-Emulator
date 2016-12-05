@@ -1,0 +1,13 @@
+irmovl $2048, %esp
+rrmovl %esp, %ebp
+irmovl $256, %ebx
+irmovl $0, %eax
+irmovl $1, %ecx
+movsbl 0(%ebx), %edx
+cmpl %edx, %eax
+je 0x34
+writeb 0(%ebx)
+addl %ecx, %ebx
+jmp 0x1A
+halt
+
