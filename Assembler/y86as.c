@@ -11,7 +11,9 @@ char *ops[28] = {"nop", "halt", "rrmovl", "irmovl", "rmmovl", "mrmovl", "addl", 
 
 int main(int argc, char **argv) {
     char *programString = getInstructions(argv[1]);
+    printf("Input:\n%sOutput:\n", programString);
     assemble(programString);
+    printf("\n");
     /*int i;
     for(i = 0; i < 28; i++) {
         unsigned long h = hash(ops[i]);
