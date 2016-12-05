@@ -253,7 +253,7 @@ void disassemble(char **programTokens) {
     }
     startAddr = hexToDec(programTokens[textPos + 1]);
     instructions = programTokens[textPos + 2];
-    printf("Instructions starting at address 0x%X:\n%s\n", startAddr, instructions);
+    printf("Input:\n%s\n", instructions);
     printf("Disassembled: \n");
     translate();
     free(programTokens);
