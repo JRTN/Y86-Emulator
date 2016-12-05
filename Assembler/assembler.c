@@ -40,6 +40,12 @@ static int getRegisterCode(char *reg) {
     }
 }
 
+static char getNextRegister() {
+    char *reg = strtok(NULL, DELIMITERS);
+    int rA = getRegisterCode(reg);
+    return rA != -1 ? rA + '0' : '\0';
+}
+
 /*
     Prints a standard error message and exits the program.
     Arguments:
@@ -77,18 +83,13 @@ static void jump(const char *fn_c) {
         const char *fn_c - the code corresponding to the y86 instruction
 */
 static void op(const char *fn_c) {
-    char *reg1 = strtok(NULL, DELIMITERS);
-    char *reg2 = strtok(NULL, DELIMITERS);
-
-    int rA = getRegisterCode(reg1);
-    int rB = getRegisterCode(reg2);
-
-    if(rA == -1 || rB == -1) {
+    char rA = getNextRegister();
+    char rB = getNextRegister();
+    if(!rA || !rB) {
         invalidArguments(fn_c, "expected two registers\n");
         return;
     }
-
-    printf("%s%c%c", fn_c, rA + '0', rB + '0');
+    printf("%s%c%c", fn_c, rA, rB);
 }
 
 /*
@@ -97,12 +98,11 @@ static void op(const char *fn_c) {
         const char *fn_c - the code corresponding to the y86 instruction
 */
 static void stackInstr(const char *fn_c) {
-    char *reg1 = strtok(NULL, DELIMITERS);
-    int rA = getRegisterCode(reg1);
-    if(rA == -1) {
+    char rA = getNextRegister();
+    if(!rA) {
         invalidArguments(fn_c, "expected one register\n");
     }
-    printf("%s%cf", fn_c, rA + '0');
+    printf("%s%cf", fn_c, rA);
 }
 
 /*
@@ -120,12 +120,11 @@ static void readWrite(const char *fn_c) {
     if(scan == EOF) {
         invalidArguments(fn_c, "could not parse displacement amount\n");
     }
-    char *reg1 = strtok(NULL, DELIMITERS);
-    int rA = getRegisterCode(reg1);
-    if(rA == -1) {
+    char rA = getNextRegister();
+    if(!rA) {
         invalidArguments(fn_c, "expected register\n");
     }
-    printf("%s%cf", fn_c, rA + '0');
+    printf("%s%cf", fn_c, rA);
     printInt32LittleEndian(displacement);
 }
 
@@ -144,15 +143,13 @@ static void sblmr(const char *fn_c) {
     if(scan == EOF) {
         invalidArguments(fn_c, "could not parse displacement amount\n");
     }
-    char *reg2 = strtok(NULL, DELIMITERS);
-    char *reg1 = strtok(NULL, DELIMITERS);
-    int rB = getRegisterCode(reg2);
-    int rA = getRegisterCode(reg1);
-    if(rA == -1 || rB == -1) {
+    char rB = getNextRegister();
+    char rA = getNextRegister();
+    if(!rA || !rB) {
         invalidArguments(fn_c, "expected two registers\n");
     }
 
-    printf("%s%c%c", fn_c, rA + '0', rB + '0');
+    printf("%s%c%c", fn_c, rA, rB);
     printInt32LittleEndian(displacement);
 
     
@@ -171,12 +168,11 @@ static void irmovl() {
     if(scan == EOF) {
         invalidArguments(IRMOVL_C, "could not parse immediate value\n");
     }
-    char *reg1 = strtok(NULL, DELIMITERS);
-    int rA = getRegisterCode(reg1);
+    char rA = getNextRegister();
     if(rA == -1) {
         invalidArguments(IRMOVL_C, "expected register\n");
     }
-    printf("%sf%c", IRMOVL_C, rA + '0');
+    printf("%sf%c", IRMOVL_C, rA);
     printInt32LittleEndian(immediate);
 
     
@@ -186,8 +182,7 @@ static void irmovl() {
     Handles assembling the rmmovl instruction
 */
 static void rmmovl() {
-    char *reg1 = strtok(NULL, DELIMITERS);
-    int rA = getRegisterCode(reg1);
+    char rA = getNextRegister();
     char *displacementStr = strtok(NULL, DELIMITERS);
     if(!displacementStr) {
         invalidArguments(RMMOVL_C, "expected decimal displacement value\n");
@@ -197,12 +192,11 @@ static void rmmovl() {
     if(scan == EOF) {
         invalidArguments(RMMOVL_C, "could not parse displacement amount\n");
     }
-    char *reg2 = strtok(NULL, DELIMITERS);
-    int rB = getRegisterCode(reg2);
-    if(rA == -1 || rB == -1) {
+    char rB = getNextRegister();
+    if(!rA || !rB) {
         invalidArguments(RMMOVL_C, "expected two registers\n");
     }
-    printf("%s%c%c", RMMOVL_C, rA + '0', rB + '0');
+    printf("%s%c%c", RMMOVL_C, rA, rB);
     printInt32LittleEndian(displacement);
     
 }
