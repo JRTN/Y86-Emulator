@@ -404,7 +404,7 @@ static void write(int fn) {
     int32_t src = cpu.registers[rA] + displacement;
     checkbound(src);
     int val = fn == B ? memory[src] : getLong(src);
-    printf("%c", val);
+    printf(fn == B ? "%c" : "%d", val);
     cpu.ipointer += 6;
 }
 
